@@ -1,0 +1,4 @@
+(executable
+ (public_name mirage)
+ (name main)
+ (libraries mirage))
