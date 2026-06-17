@@ -1,3 +1,6 @@
 (library
  (name mirage)
  (libraries ))
+
+(ocamllex
+  (modules lexer))

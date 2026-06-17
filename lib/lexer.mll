@@ -1,5 +1,15 @@
 {
-  open Parser
+  type token =
+    | FLOAT of float
+    | INT of int
+    | BOOL of bool
+    | IDENT of string
+    | UPPER_IDENT of string
+    | OBSERVE | SAMPLE
+    | ADD | SUB | MUL | DIV
+    | GT | LT | DET | DIST
+    | LPAREN | RPAREN | COMMA | SEMICOLON
+    | EOF
 }
 
 rule next_token = parse
