@@ -14,7 +14,8 @@
 }
 
 rule next_token = parse
-| [' ' '\t' '\n'] { next_token lexbuf }
+| [' ' '\t'] { next_token lexbuf }
+| '\n' { Lexing.new_line lexbuf; next_token lexbuf }
 | ';' { SEMICOLON }
 | ',' { COMMA }
 | '(' { LPAREN }
