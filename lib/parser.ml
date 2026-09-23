@@ -55,6 +55,10 @@ and parse_expr state =
       advance state;
       let rhs = parse_addition state in
       BinOp (Lt, lhs, rhs)
+  | EQ ->
+    advance state;
+    let rhs = parse_addition state in
+    BinOp(Eq, lhs, rhs)
   | _ -> lhs
 
 and parse_addition state =

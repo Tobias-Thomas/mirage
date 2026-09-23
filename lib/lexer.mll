@@ -7,9 +7,10 @@
     | UPPER_IDENT of string
     | OBSERVE | SAMPLE
     | ADD | SUB | MUL | DIV
-    | GT | LT | DET | DIST
+    | GT | LT | EQ | DET | DIST
     | LPAREN | RPAREN | COMMA | SEMICOLON
     | EOF
+  [@@deriving show { with_path = false }]
 }
 
 rule next_token = parse
@@ -25,6 +26,7 @@ rule next_token = parse
 | '>' { GT }
 | '<' { LT }
 | '~' { DIST }
+| "==" { EQ }
 | '=' { DET }
 | ['0'-'9']+ '.' ['0'-'9']* as f { FLOAT (float_of_string f) }
 | ['0'-'9']+ as n { INT (int_of_string n) }

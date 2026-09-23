@@ -1,6 +1,8 @@
 (library
  (name mirage)
- (libraries ))
+ (libraries )
+ (preprocess
+  (pps ppx_deriving.show)))
 
 (ocamllex
   (modules lexer))

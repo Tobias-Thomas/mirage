@@ -1,3 +1,6 @@
-(test
- (name test_mirage)
- (libraries mirage))
+(library
+ (name mirage_tests)
+ (inline_tests)
+ (libraries mirage)
+ (preprocess
+  (pps ppx_expect)))

@@ -12,6 +12,9 @@
 (package
  (name mirage)
  (synopsis "A probabilistic programming language written in OCaml")
- (depends ocaml)
+ (depends
+  ocaml
+  ppx_deriving
+  (ppx_expect :with-test))
  (tags
-  ("probabilistic programming" your project)))
+  ("probabilistic programming" "Bayesian inference")))

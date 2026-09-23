@@ -10,7 +10,7 @@ let logpdf dist x =
   | Exponential lambda ->
       if x < 0. then Float.neg_infinity else log lambda -. (lambda *. x)
   | Bernoulli p ->
-      if x == 0. then 1. -. p else if x == 1. then p else Float.neg_infinity
+      if x = 0. then log 1. -. p else if x = 1. then log p else Float.neg_infinity
 
 let pdf dist x = exp (logpdf dist x)
 
@@ -27,4 +27,4 @@ let quantile dist p =
   match dist with
   | Uniform (low, high) -> Some (low +. (p *. (high -. low)))
   | Exponential lambda -> Some (-.log (1. -. p) /. lambda)
-  | Bernoulli p -> None
+  | Bernoulli _ -> None
