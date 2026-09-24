@@ -1,14 +1,17 @@
 type value = Continuous of float | Discrete of int | Binary of bool
 [@@deriving show { with_path = false }]
 
-type op = Add | Sub | Mul | Div | Gt | Lt | Eq
+type bin_op = Add | Sub | Mul | Div | Gt | Lt | Eq
 [@@deriving show { with_path = false }]
+
+type un_op = Neg [@@deriving show { with_path = false }]
 
 type expr =
   | Literal of value
   | Var of string
   | Dist of string * expr list
-  | BinOp of op * expr * expr
+  | BinOp of bin_op * expr * expr
+  | UnOp of un_op * expr
 [@@deriving show { with_path = false }]
 
 and stmt =

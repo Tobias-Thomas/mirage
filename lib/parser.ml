@@ -102,6 +102,7 @@ and parse_atom state =
   | UPPER_IDENT d ->
       let expr_list = parse_expr_list state in
       Dist (d, expr_list)
+  | SUB -> UnOp (Neg, parse_atom state)
   | LPAREN ->
       let expr = parse_expr state in
       expect state RPAREN;

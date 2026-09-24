@@ -132,12 +132,45 @@ let%expect_test "distributions" =
        ))
     |}]
 
-(* The expected output depends on how you represent negation in the AST, so
-   it is left empty: once it parses, check the output and run [dune promote]. *)
 let%expect_test "unary minus" =
   print_expr "-1.0";
   print_program "x ~ Normal(-1.0, 1.0);";
-  [%expect {||}]
+  [%expect
+    {|
+    (UnOp (Neg, (Literal (Continuous 1.))))
+    [(LetRand ("x",
+        (Dist ("Normal",
+           [(UnOp (Neg, (Literal (Continuous 1.)))); (Literal (Continuous 1.))]))
+        ))
+      ]
+    |}]
+
+let%expect_test "unary minus binds tighter than binary operators" =
+  print_expr "-2 * 3";
+  print_expr "-x + 1";
+  [%expect
+    {|
+    (BinOp (Mul, (UnOp (Neg, (Literal (Discrete 2)))), (Literal (Discrete 3))))
+    (BinOp (Add, (UnOp (Neg, (Var "x"))), (Literal (Discrete 1))))
+    |}]
+
+let%expect_test "unary minus on compound operands" =
+  print_expr "--x";
+  print_expr "-(a + b)";
+  [%expect
+    {|
+    (UnOp (Neg, (UnOp (Neg, (Var "x")))))
+    (UnOp (Neg, (BinOp (Add, (Var "a"), (Var "b")))))
+    |}]
+
+let%expect_test "unary minus next to binary minus" =
+  print_expr "1 - -2";
+  print_expr "x-1";
+  [%expect
+    {|
+    (BinOp (Sub, (Literal (Discrete 1)), (UnOp (Neg, (Literal (Discrete 2))))))
+    (BinOp (Sub, (Var "x"), (Literal (Discrete 1))))
+    |}]
 
 (* Errors *)
 
