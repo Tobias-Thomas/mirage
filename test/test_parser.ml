@@ -22,23 +22,30 @@ let%expect_test "random assignment" =
     |}]
 
 let%expect_test "observe" =
-  print_program "observe x > 0.5;";
+  print_program "observe x 2.3;";
+  print_program "observe n 3;";
+  print_program "observe c true;";
   [%expect
-    {| [(Observe (BinOp (Gt, (Var "x"), (Literal (Continuous 0.5)))))] |}]
+    {|
+    [(Observe ("x", (Continuous 2.3)))]
+    [(Observe ("n", (Discrete 3)))]
+    [(Observe ("c", (Binary true)))]
+    |}]
 
-let%expect_test "sample" =
-  print_program "sample x;";
-  [%expect {| [(Sample "x")] |}]
+let%expect_test "observe a negative value" =
+  print_program "observe y -1.5;";
+  [%expect {| [(Observe ("y", (Continuous -1.5)))] |}]
 
 let%expect_test "multiple statements" =
-  print_program "p ~ Uniform(0.0, 1.0);\nc ~ Bernoulli(p);\nsample p;";
+  print_program "p ~ Uniform(0.0, 1.0);\nc ~ Bernoulli(p);\nobserve c true;";
   [%expect
     {|
     [(LetRand ("p",
         (Dist ("Uniform", [(Literal (Continuous 0.)); (Literal (Continuous 1.))]
            ))
         ));
-      (LetRand ("c", (Dist ("Bernoulli", [(Var "p")])))); (Sample "p")]
+      (LetRand ("c", (Dist ("Bernoulli", [(Var "p")]))));
+      (Observe ("c", (Binary true)))]
     |}]
 
 (* Expressions *)
@@ -194,9 +201,20 @@ let%expect_test "missing comma in arguments" =
   print_program "x ~ Uniform(1 2);";
   [%expect {| error: Failure("expected , or ) but got other token") |}]
 
-let%expect_test "observe without expression" =
+let%expect_test "malformed observations" =
   print_program "observe;";
-  [%expect {| error: Failure("wrong token") |}]
+  print_program "observe x;";
+  print_program "observe 2.3;";
+  print_program "observe x y;";
+  print_program "observe x 1 + 2;";
+  [%expect
+    {|
+    error: Failure("expected string but got other token")
+    error: Failure("wrong token")
+    error: Failure("expected string but got other token")
+    error: Failure("expected a value after observe")
+    error: Failure("wrong token")
+    |}]
 
 let%expect_test "statement starting with a literal" =
   print_program "1 = x;";

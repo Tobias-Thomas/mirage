@@ -40,8 +40,8 @@ let%expect_test "numbers" =
   [%expect {| (INT 42) (FLOAT 1.5) (FLOAT 2.) |}]
 
 let%expect_test "keywords" =
-  print_tokens "observe sample true false";
-  [%expect {| OBSERVE SAMPLE (BOOL true) (BOOL false) |}]
+  print_tokens "observe true false";
+  [%expect {| OBSERVE (BOOL true) (BOOL false) |}]
 
 let%expect_test "keyword prefix is an identifier" =
   print_tokens "observer samples";

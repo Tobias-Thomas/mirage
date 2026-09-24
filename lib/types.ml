@@ -17,8 +17,7 @@ type expr =
 and stmt =
   | LetDet of string * expr
   | LetRand of string * expr
-  | Observe of expr
-  | Sample of string
+  | Observe of string * value
 [@@deriving show { with_path = false }]
 
 type program = stmt list [@@deriving show { with_path = false }]

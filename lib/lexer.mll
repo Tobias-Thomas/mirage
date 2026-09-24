@@ -5,7 +5,7 @@
     | BOOL of bool
     | IDENT of string
     | UPPER_IDENT of string
-    | OBSERVE | SAMPLE
+    | OBSERVE
     | ADD | SUB | MUL | DIV
     | GT | LT | EQ | DET | DIST
     | LPAREN | RPAREN | COMMA | SEMICOLON
@@ -34,7 +34,6 @@ rule next_token = parse
 | ['a'-'z'] ['a'-'z' 'A'-'Z' '0'-'9' '_']* as s {
   match s with
   | "observe" -> OBSERVE
-  | "sample" -> SAMPLE
   | "true" -> BOOL true
   | "false" -> BOOL false
   | _ -> IDENT s

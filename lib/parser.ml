@@ -25,12 +25,14 @@ let rec parse_program state =
 
 and parse_stmt state =
   match peek_advance state with
-  | OBSERVE ->
-      let expr = parse_expr state in
-      Observe expr
-  | SAMPLE ->
-      let name = parse_string state in
-      Sample name
+  | OBSERVE -> (
+      let variable = parse_string state in
+      let val_expr = parse_atom state in
+      match val_expr with
+      | Literal v -> Observe (variable, v)
+      | UnOp (Neg, Literal (Continuous f)) -> Observe (variable, Continuous (-.f))
+      | UnOp (Neg, Literal (Discrete i)) -> Observe (variable, Discrete (-i))
+      | _ -> failwith "expected a value after observe")
   | IDENT var -> (
       match peek_advance state with
       | DET ->
