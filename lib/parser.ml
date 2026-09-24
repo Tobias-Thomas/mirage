@@ -56,9 +56,9 @@ and parse_expr state =
       let rhs = parse_addition state in
       BinOp (Lt, lhs, rhs)
   | EQ ->
-    advance state;
-    let rhs = parse_addition state in
-    BinOp(Eq, lhs, rhs)
+      advance state;
+      let rhs = parse_addition state in
+      BinOp (Eq, lhs, rhs)
   | _ -> lhs
 
 and parse_addition state =
@@ -68,13 +68,13 @@ and parse_addition state =
 and parse_add_rec state acc =
   match peek state with
   | ADD ->
-    advance state;
-    let rhs = parse_multiply state in
-    parse_add_rec state (BinOp (Add, acc, rhs))
+      advance state;
+      let rhs = parse_multiply state in
+      parse_add_rec state (BinOp (Add, acc, rhs))
   | SUB ->
-    advance state;
-    let rhs = parse_multiply state in
-    parse_add_rec state (BinOp (Sub, acc, rhs))
+      advance state;
+      let rhs = parse_multiply state in
+      parse_add_rec state (BinOp (Sub, acc, rhs))
   | _ -> acc
 
 and parse_multiply state =
@@ -84,13 +84,13 @@ and parse_multiply state =
 and parse_multiply_rec state acc =
   match peek state with
   | MUL ->
-    advance state;
-    let rhs = parse_atom state in
-   parse_multiply_rec state (BinOp (Mul, acc, rhs))
+      advance state;
+      let rhs = parse_atom state in
+      parse_multiply_rec state (BinOp (Mul, acc, rhs))
   | DIV ->
-    advance state;
-    let rhs = parse_atom state in
-    parse_multiply_rec state (BinOp (Div, acc, rhs))
+      advance state;
+      let rhs = parse_atom state in
+      parse_multiply_rec state (BinOp (Div, acc, rhs))
   | _ -> acc
 
 and parse_atom state =

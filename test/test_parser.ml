@@ -12,7 +12,8 @@ let%expect_test "deterministic assignment" =
 
 let%expect_test "random assignment" =
   print_program "x ~ Uniform(0.0, 1.0);";
-  [%expect {|
+  [%expect
+    {|
     [(LetRand ("x",
         (Dist ("Uniform", [(Literal (Continuous 0.)); (Literal (Continuous 1.))]
            ))
@@ -22,7 +23,8 @@ let%expect_test "random assignment" =
 
 let%expect_test "observe" =
   print_program "observe x > 0.5;";
-  [%expect {| [(Observe (BinOp (Gt, (Var "x"), (Literal (Continuous 0.5)))))] |}]
+  [%expect
+    {| [(Observe (BinOp (Gt, (Var "x"), (Literal (Continuous 0.5)))))] |}]
 
 let%expect_test "sample" =
   print_program "sample x;";
@@ -30,7 +32,8 @@ let%expect_test "sample" =
 
 let%expect_test "multiple statements" =
   print_program "p ~ Uniform(0.0, 1.0);\nc ~ Bernoulli(p);\nsample p;";
-  [%expect {|
+  [%expect
+    {|
     [(LetRand ("p",
         (Dist ("Uniform", [(Literal (Continuous 0.)); (Literal (Continuous 1.))]
            ))
@@ -45,7 +48,8 @@ let%expect_test "literals and variables" =
   print_expr "1.5";
   print_expr "true";
   print_expr "y";
-  [%expect {|
+  [%expect
+    {|
     (Literal (Discrete 1))
     (Literal (Continuous 1.5))
     (Literal (Binary true))
@@ -55,7 +59,8 @@ let%expect_test "literals and variables" =
 let%expect_test "* binds tighter than +" =
   print_expr "1 + 2 * 3";
   print_expr "1 * 2 + 3";
-  [%expect {|
+  [%expect
+    {|
     (BinOp (Add, (Literal (Discrete 1)),
        (BinOp (Mul, (Literal (Discrete 2)), (Literal (Discrete 3))))))
     (BinOp (Add, (BinOp (Mul, (Literal (Discrete 1)), (Literal (Discrete 2)))),
@@ -64,7 +69,8 @@ let%expect_test "* binds tighter than +" =
 
 let%expect_test "parentheses override precedence" =
   print_expr "(1 + 2) * 3";
-  [%expect {|
+  [%expect
+    {|
     (BinOp (Mul, (BinOp (Add, (Literal (Discrete 1)), (Literal (Discrete 2)))),
        (Literal (Discrete 3))))
     |}]
@@ -73,7 +79,8 @@ let%expect_test "chained + and -" =
   print_expr "1 + 2 + 3";
   print_expr "1 - 2 - 3";
   print_expr "1 + 2 - 3";
-  [%expect {|
+  [%expect
+    {|
     (BinOp (Add, (BinOp (Add, (Literal (Discrete 1)), (Literal (Discrete 2)))),
        (Literal (Discrete 3))))
     (BinOp (Sub, (BinOp (Sub, (Literal (Discrete 1)), (Literal (Discrete 2)))),
@@ -85,7 +92,8 @@ let%expect_test "chained + and -" =
 let%expect_test "chained * and /" =
   print_expr "1 * 2 * 3";
   print_expr "8 / 4 / 2";
-  [%expect {|
+  [%expect
+    {|
     (BinOp (Mul, (BinOp (Mul, (Literal (Discrete 1)), (Literal (Discrete 2)))),
        (Literal (Discrete 3))))
     (BinOp (Div, (BinOp (Div, (Literal (Discrete 8)), (Literal (Discrete 4)))),
@@ -94,14 +102,16 @@ let%expect_test "chained * and /" =
 
 let%expect_test "sum of products" =
   print_expr "1 * 2 + 3 * 4";
-  [%expect {|
+  [%expect
+    {|
     (BinOp (Add, (BinOp (Mul, (Literal (Discrete 1)), (Literal (Discrete 2)))),
        (BinOp (Mul, (Literal (Discrete 3)), (Literal (Discrete 4))))))
     |}]
 
 let%expect_test "comparison has lowest precedence" =
   print_expr "a + 1 > b * 2";
-  [%expect {|
+  [%expect
+    {|
     (BinOp (Gt, (BinOp (Add, (Var "a"), (Literal (Discrete 1)))),
        (BinOp (Mul, (Var "b"), (Literal (Discrete 2))))))
     |}]
@@ -113,7 +123,8 @@ let%expect_test "equality" =
 let%expect_test "distributions" =
   print_expr "Foo()";
   print_expr "Normal(mu + 1.0, 2.0 * s)";
-  [%expect {|
+  [%expect
+    {|
     (Dist ("Foo", []))
     (Dist ("Normal",
        [(BinOp (Add, (Var "mu"), (Literal (Continuous 1.))));

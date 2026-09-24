@@ -24,7 +24,8 @@ let%expect_test "= vs == (longest match)" =
   print_tokens "x = y";
   print_tokens "x==y";
   print_tokens "===";
-  [%expect {|
+  [%expect
+    {|
     (IDENT "x") DET (IDENT "y")
     (IDENT "x") EQ (IDENT "y")
     EQ DET
@@ -52,7 +53,8 @@ let%expect_test "identifiers" =
 
 let%expect_test "distribution call" =
   print_tokens "x ~ Uniform(0.0, 1);";
-  [%expect {| (IDENT "x") DIST (UPPER_IDENT "Uniform") LPAREN (FLOAT 0.) COMMA (INT 1) RPAREN SEMICOLON |}]
+  [%expect
+    {| (IDENT "x") DIST (UPPER_IDENT "Uniform") LPAREN (FLOAT 0.) COMMA (INT 1) RPAREN SEMICOLON |}]
 
 let%expect_test "unexpected character" =
   print_tokens "$";
