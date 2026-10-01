@@ -30,7 +30,8 @@ and parse_stmt state =
       let val_expr = parse_atom state in
       match val_expr with
       | Literal v -> Observe (variable, v)
-      | UnOp (Neg, Literal (Continuous f)) -> Observe (variable, Continuous (-.f))
+      | UnOp (Neg, Literal (Continuous f)) ->
+          Observe (variable, Continuous (-.f))
       | UnOp (Neg, Literal (Discrete i)) -> Observe (variable, Discrete (-i))
       | _ -> failwith "expected a value after observe")
   | IDENT var -> (
