@@ -9,14 +9,15 @@ type un_op = Neg [@@deriving show { with_path = false }]
 type expr =
   | Literal of value
   | Var of string
-  | Dist of string * expr list
   | BinOp of bin_op * expr * expr
   | UnOp of un_op * expr
 [@@deriving show { with_path = false }]
 
+and dist = string * expr list [@@deriving show { with_path = false }]
+
 and stmt =
   | LetDet of string * expr
-  | LetRand of string * expr
+  | LetRand of string * dist
   | Observe of string * value
 [@@deriving show { with_path = false }]
 

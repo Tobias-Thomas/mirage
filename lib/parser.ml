@@ -38,11 +38,9 @@ and parse_stmt state =
       | DET ->
           let rhs = parse_expr state in
           LetDet (var, rhs)
-      | DIST -> (
-          let rhs = parse_expr state in
-          match rhs with
-          | Dist _ -> LetRand (var, rhs)
-          | _ -> failwith "expected a dist on the rhs of ~")
+      | DIST ->
+          let rhs = parse_dist state in
+          LetRand (var, rhs)
       | _ -> failwith "expected = or ~ but got other token")
   | _ -> failwith "wrong token"
 
@@ -101,15 +99,19 @@ and parse_atom state =
   | INT i -> Literal (Discrete i)
   | BOOL b -> Literal (Binary b)
   | IDENT s -> Var s
-  | UPPER_IDENT d ->
-      let expr_list = parse_expr_list state in
-      Dist (d, expr_list)
   | SUB -> UnOp (Neg, parse_atom state)
   | LPAREN ->
       let expr = parse_expr state in
       expect state RPAREN;
       expr
   | _ -> failwith "wrong token"
+
+and parse_dist state =
+  match peek_advance state with
+  | UPPER_IDENT d ->
+      let expr_list = parse_expr_list state in
+      (d, expr_list)
+  | _ -> failwith "expected a Distribution name"
 
 and parse_expr_list state =
   expect state LPAREN;
