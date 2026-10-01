@@ -15,9 +15,7 @@ let%expect_test "random assignment" =
   [%expect
     {|
     [(LetRand ("x",
-        (Dist ("Uniform", [(Literal (Continuous 0.)); (Literal (Continuous 1.))]
-           ))
-        ))
+        ("Uniform", [(Literal (Continuous 0.)); (Literal (Continuous 1.))])))
       ]
     |}]
 
@@ -41,11 +39,9 @@ let%expect_test "multiple statements" =
   [%expect
     {|
     [(LetRand ("p",
-        (Dist ("Uniform", [(Literal (Continuous 0.)); (Literal (Continuous 1.))]
-           ))
-        ));
-      (LetRand ("c", (Dist ("Bernoulli", [(Var "p")]))));
-      (Observe ("c", (Binary true)))]
+        ("Uniform", [(Literal (Continuous 0.)); (Literal (Continuous 1.))])));
+      (LetRand ("c", ("Bernoulli", [(Var "p")]))); (Observe ("c", (Binary true)))
+      ]
     |}]
 
 (* Expressions *)
@@ -128,15 +124,14 @@ let%expect_test "equality" =
   [%expect {| (BinOp (Eq, (Var "a"), (Literal (Discrete 1)))) |}]
 
 let%expect_test "distributions" =
-  print_expr "Foo()";
-  print_expr "Normal(mu + 1.0, 2.0 * s)";
+  print_dist "Foo()";
+  print_dist "Normal(mu + 1.0, 2.0 * s)";
   [%expect
     {|
-    (Dist ("Foo", []))
-    (Dist ("Normal",
-       [(BinOp (Add, (Var "mu"), (Literal (Continuous 1.))));
-         (BinOp (Mul, (Literal (Continuous 2.)), (Var "s")))]
-       ))
+    ("Foo", [])
+    ("Normal",
+     [(BinOp (Add, (Var "mu"), (Literal (Continuous 1.))));
+       (BinOp (Mul, (Literal (Continuous 2.)), (Var "s")))])
     |}]
 
 let%expect_test "unary minus" =
@@ -146,8 +141,8 @@ let%expect_test "unary minus" =
     {|
     (UnOp (Neg, (Literal (Continuous 1.))))
     [(LetRand ("x",
-        (Dist ("Normal",
-           [(UnOp (Neg, (Literal (Continuous 1.)))); (Literal (Continuous 1.))]))
+        ("Normal",
+         [(UnOp (Neg, (Literal (Continuous 1.)))); (Literal (Continuous 1.))])
         ))
       ]
     |}]
@@ -191,7 +186,11 @@ let%expect_test "missing right-hand side" =
 
 let%expect_test "non-distribution after ~" =
   print_program "x ~ 1;";
-  [%expect {| error: Failure("expected a dist on the rhs of ~") |}]
+  [%expect {| error: Failure("expected a Distribution name") |}]
+
+let%expect_test "distribution after =" =
+  print_program "x = Uniform(0.0, 1.0);";
+  [%expect {| error: Failure("wrong token") |}]
 
 let%expect_test "unclosed parenthesis" =
   print_program "x = (1 + 2;";

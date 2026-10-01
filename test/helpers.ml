@@ -31,3 +31,11 @@ let print_expr s =
       match parse ("x = " ^ s ^ ";") with
       | [ Types.LetDet ("x", e) ] -> Types.show_expr e
       | _ -> failwith "unexpected program shape")
+
+(* Parses [s] as the right-hand side of a random assignment and prints just the
+   distribution. *)
+let print_dist s =
+  print_or_error (fun () ->
+      match parse ("x ~ " ^ s ^ ";") with
+      | [ Types.LetRand ("x", d) ] -> Types.show_dist d
+      | _ -> failwith "unexpected program shape")
