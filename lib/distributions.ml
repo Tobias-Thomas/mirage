@@ -21,10 +21,20 @@ let bernoulli ~p =
   if p >= 0. && p <= 1. then Ok (Bernoulli p)
   else Error (Printf.sprintf "Bernoulli(%g): expected p in [0, 1]" p)
 
+let of_name name args =
+  match (name, args) with
+  | "Uniform", [ low; high ] -> uniform ~low ~high
+  | "Uniform", _ -> Error "Uniform requires two arguments"
+  | "Exponential", [ lambda ] -> exponential ~lambda
+  | "Exponential", _ -> Error "Exponential requires one argument"
+  | "Bernoulli", [ p ] -> bernoulli ~p
+  | "Bernoulli", _ -> Error "Bernoulli requires one argument"
+  | _, _ -> Error "unknown distribution name"
+
 let logpdf dist x =
   match dist with
   | Uniform (low, high) ->
-      if low < x && x < high then -.log (high -. low) else Float.neg_infinity
+      if low <= x && x <= high then -.log (high -. low) else Float.neg_infinity
   | Exponential lambda ->
       if x < 0. then Float.neg_infinity else log lambda -. (lambda *. x)
   | Bernoulli p ->
@@ -44,8 +54,9 @@ let cdf dist x =
   | Bernoulli p -> if x < 0. then 0. else if x < 1. then 1. -. p else 1.
 
 let quantile dist p =
-  match dist with
-  | Uniform (low, high) ->
-      if p >= low && p <= high then Some (low +. (p *. (high -. low))) else None
-  | Exponential lambda -> Some (-.log (1. -. p) /. lambda)
-  | Bernoulli _ -> None
+  if p >= 0. && p <= 1. then
+    match dist with
+    | Uniform (low, high) -> Some (low +. (p *. (high -. low)))
+    | Exponential lambda -> Some (-.log (1. -. p) /. lambda)
+    | Bernoulli _ -> None
+  else None
