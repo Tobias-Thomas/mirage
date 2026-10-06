@@ -22,10 +22,10 @@ type expr =
 
 type dist = string * expr list [@@deriving show { with_path = false }]
 
-type stmt =
-  | LetDet of string * expr
-  | LetRand of string * dist
-  | Observe of string * value
+type stmt = LetDet of string * expr | LetRand of string * dist
 [@@deriving show { with_path = false }]
 
-type program = stmt list [@@deriving show { with_path = false }]
+type observation = string * value [@@deriving show { with_path = false }]
+
+type program = { stmts : stmt list; observations : observation list }
+[@@deriving show { with_path = false }]

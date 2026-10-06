@@ -15,33 +15,26 @@ let peek_advance state =
 let expect state token =
   if peek_advance state <> token then failwith "wrong token"
 
-let rec parse_program state =
-  match peek state with
-  | EOF -> []
-  | _ ->
-      let stmt = parse_stmt state in
-      expect state SEMICOLON;
-      stmt :: parse_program state
-
-and parse_stmt state =
+let rec parse_stmt state =
   match peek_advance state with
   | OBSERVE -> (
       let variable = parse_string state in
       let val_expr = parse_atom state in
       match val_expr with
-      | Literal v -> Observe (variable, v)
+      | Literal v -> Either.right (variable, v)
       | UnOp (Neg, Literal (Continuous f)) ->
-          Observe (variable, Continuous (-.f))
-      | UnOp (Neg, Literal (Discrete i)) -> Observe (variable, Discrete (-i))
+          Either.right (variable, Continuous (-.f))
+      | UnOp (Neg, Literal (Discrete i)) ->
+          Either.right (variable, Discrete (-i))
       | _ -> failwith "expected a value after observe")
   | IDENT var -> (
       match peek_advance state with
       | DET ->
           let rhs = parse_expr state in
-          LetDet (var, rhs)
+          Either.left (LetDet (var, rhs))
       | DIST ->
           let rhs = parse_dist state in
-          LetRand (var, rhs)
+          Either.left (LetRand (var, rhs))
       | _ -> failwith "expected = or ~ but got other token")
   | _ -> failwith "wrong token"
 
@@ -134,3 +127,16 @@ and parse_string state =
   match peek_advance state with
   | IDENT s -> s
   | _ -> failwith "expected string but got other token"
+
+let parse_program state =
+  let rec parse_stmts state =
+    match peek state with
+    | EOF -> []
+    | _ ->
+        let stmt = parse_stmt state in
+        expect state SEMICOLON;
+        stmt :: parse_stmts state
+  in
+  let stmts = parse_stmts state in
+  let stmt_list, obs_list = List.partition_map Fun.id stmts in
+  { stmts = stmt_list; observations = obs_list }

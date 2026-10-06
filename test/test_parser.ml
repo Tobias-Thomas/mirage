@@ -4,19 +4,22 @@ open Helpers
 
 let%expect_test "empty program" =
   print_program "";
-  [%expect {| [] |}]
+  [%expect {| { stmts = []; observations = [] } |}]
 
 let%expect_test "deterministic assignment" =
   print_program "x = 1;";
-  [%expect {| [(LetDet ("x", (Literal (Discrete 1))))] |}]
+  [%expect
+    {| { stmts = [(LetDet ("x", (Literal (Discrete 1))))]; observations = [] } |}]
 
 let%expect_test "random assignment" =
   print_program "x ~ Uniform(0.0, 1.0);";
   [%expect
     {|
-    [(LetRand ("x",
-        ("Uniform", [(Literal (Continuous 0.)); (Literal (Continuous 1.))])))
-      ]
+    { stmts =
+      [(LetRand ("x",
+          ("Uniform", [(Literal (Continuous 0.)); (Literal (Continuous 1.))])))
+        ];
+      observations = [] }
     |}]
 
 let%expect_test "observe" =
@@ -25,23 +28,24 @@ let%expect_test "observe" =
   print_program "observe c true;";
   [%expect
     {|
-    [(Observe ("x", (Continuous 2.3)))]
-    [(Observe ("n", (Discrete 3)))]
-    [(Observe ("c", (Binary true)))]
+    { stmts = []; observations = [("x", (Continuous 2.3))] }
+    { stmts = []; observations = [("n", (Discrete 3))] }
+    { stmts = []; observations = [("c", (Binary true))] }
     |}]
 
 let%expect_test "observe a negative value" =
   print_program "observe y -1.5;";
-  [%expect {| [(Observe ("y", (Continuous -1.5)))] |}]
+  [%expect {| { stmts = []; observations = [("y", (Continuous -1.5))] } |}]
 
 let%expect_test "multiple statements" =
   print_program "p ~ Uniform(0.0, 1.0);\nc ~ Bernoulli(p);\nobserve c true;";
   [%expect
     {|
-    [(LetRand ("p",
-        ("Uniform", [(Literal (Continuous 0.)); (Literal (Continuous 1.))])));
-      (LetRand ("c", ("Bernoulli", [(Var "p")]))); (Observe ("c", (Binary true)))
-      ]
+    { stmts =
+      [(LetRand ("p",
+          ("Uniform", [(Literal (Continuous 0.)); (Literal (Continuous 1.))])));
+        (LetRand ("c", ("Bernoulli", [(Var "p")])))];
+      observations = [("c", (Binary true))] }
     |}]
 
 (* Expressions *)
@@ -140,11 +144,13 @@ let%expect_test "unary minus" =
   [%expect
     {|
     (UnOp (Neg, (Literal (Continuous 1.))))
-    [(LetRand ("x",
-        ("Normal",
-         [(UnOp (Neg, (Literal (Continuous 1.)))); (Literal (Continuous 1.))])
-        ))
-      ]
+    { stmts =
+      [(LetRand ("x",
+          ("Normal",
+           [(UnOp (Neg, (Literal (Continuous 1.)))); (Literal (Continuous 1.))])
+          ))
+        ];
+      observations = [] }
     |}]
 
 let%expect_test "unary minus binds tighter than binary operators" =
