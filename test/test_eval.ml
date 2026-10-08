@@ -98,6 +98,45 @@ let%expect_test "observing a variable twice" =
   [%expect
     {| runtime error: Redefined_variable: x was observed multiple times |}]
 
+let%expect_test "redefining a variable with =" =
+  print_eval "x = 1; x = 2;";
+  print_eval "x ~ Uniform(0.0, 1.0); x = 2.0;";
+  [%expect
+    {|
+    runtime error: Redefined_variable: x was defined multiple times
+    runtime error: Redefined_variable: x was defined multiple times
+    |}]
+
+(* The message is misleading here (see TODO.md); update it with [dune promote]
+   once the observed case has its own message. *)
+let%expect_test "defining an observed variable with =" =
+  print_eval "x = 1.0; observe x 1.0;";
+  print_eval "observe x 1.0; x = 1.0;";
+  [%expect
+    {|
+    runtime error: Redefined_variable: x was defined multiple times
+    runtime error: Redefined_variable: x was defined multiple times
+    |}]
+
+let%expect_test "redefining a variable with ~" =
+  print_eval "x = 1; x ~ Uniform(0.0, 1.0);";
+  print_eval "x ~ Uniform(0.0, 1.0); x ~ Uniform(5.0, 6.0);";
+  [%expect {|
+    runtime error: Redefined_variable: x was defined multiple times
+    runtime error: Redefined_variable: x was defined multiple times
+    |}]
+
+(* Known gap (see TODO.md): an observation that no ~ uses is ignored. *)
+let%expect_test "observation without a matching ~" =
+  print_eval "observe z 1.0;";
+  print_eval "z = 1.0 + 1.0; x ~ Uniform(0.0, 1.0); observe x 0.5; observe y 1.0;";
+  [%expect {|
+    log_weight = 0
+    x = (Continuous 0.5)
+    z = (Continuous 2.)
+    log_weight = 0
+    |}]
+
 (* Known gap (see TODO.md): integer division by zero escapes [eval_program] as
    an OCaml exception instead of returning [Error]. *)
 let%expect_test "integer division by zero" =

@@ -68,21 +68,32 @@ let eval_dist env dist_name dist_args =
 let eval_stmt rng obs_map trace stmt =
   match stmt with
   | LetDet (var, expr) ->
-      {
-        env = Env.add var (eval_expr trace.env expr) trace.env;
-        log_weight = trace.log_weight;
-      }
+      if Env.mem var trace.env || Env.mem var obs_map then
+        raise
+          (Runtime_error
+             (Redefined_variable
+                (Printf.sprintf "%s was defined multiple times" var)))
+      else { trace with env = Env.add var (eval_expr trace.env expr) trace.env }
   | LetRand (var, (name, args)) -> (
-      let dist = eval_dist trace.env name args in
-      match Env.find_opt var obs_map with
-      | Some v ->
-          {
-            env = Env.add var v trace.env;
-            log_weight =
-              trace.log_weight +. Distributions.logpdf dist (float_of_value v);
-          }
-      | None ->
-          { trace with env = Env.add var (Samplers.sample rng dist) trace.env })
+      if Env.mem var trace.env then
+        raise
+          (Runtime_error
+             (Redefined_variable
+                (Printf.sprintf "%s was defined multiple times" var)))
+      else
+        let dist = eval_dist trace.env name args in
+        match Env.find_opt var obs_map with
+        | Some v ->
+            {
+              env = Env.add var v trace.env;
+              log_weight =
+                trace.log_weight +. Distributions.logpdf dist (float_of_value v);
+            }
+        | None ->
+            {
+              trace with
+              env = Env.add var (Samplers.sample rng dist) trace.env;
+            })
 
 let eval_obs obs_map obs =
   let var, value = obs in
