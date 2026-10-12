@@ -10,7 +10,6 @@ val kind : 'a distribution -> 'a kind
 val uniform : low:float -> high:float -> (float distribution, string) result
 val exponential : lambda:float -> (float distribution, string) result
 val bernoulli : p:float -> (bool distribution, string) result
-val of_name : string -> float list -> (any_distribution, string) result
 val logpdf : 'a distribution -> 'a -> float
 val pdf : 'a distribution -> 'a -> float
 val cdf : 'a distribution -> 'a -> float

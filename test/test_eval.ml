@@ -80,17 +80,35 @@ let%expect_test "negating a boolean" =
   print_eval "x = -true;";
   [%expect {| runtime error: Type_error: Binary values can not be negated |}]
 
-let%expect_test "invalid distributions" =
-  print_eval "x ~ Foo();";
-  print_eval "x ~ Uniform(1.0);";
+(* Unknown names and wrong argument counts are parse errors now (see
+   test_parser.ml); only parameter values are checked at runtime. *)
+let%expect_test "invalid distribution parameters" =
   print_eval "x ~ Uniform(1.0, 0.0);";
+  print_eval "x ~ Exponential(-1.0);";
   print_eval "x ~ Bernoulli(1.5);";
   [%expect
     {|
-    runtime error: Invalid_distribution: unknown distribution name
-    runtime error: Invalid_distribution: Uniform requires two arguments
     runtime error: Invalid_distribution: Uniform(1, 0): expected finite values and low < high
+    runtime error: Invalid_distribution: Exponential(-1): expected finite and >0 lambda
     runtime error: Invalid_distribution: Bernoulli(1.5): expected p in [0, 1]
+    |}]
+
+(* Parameters can depend on earlier variables, so this can only be caught while
+   evaluating, not while parsing. *)
+let%expect_test "invalid parameter computed from a variable" =
+  print_eval "p = 0.5 + 1.0; c ~ Bernoulli(p);";
+  [%expect
+    {| runtime error: Invalid_distribution: Bernoulli(1.5): expected p in [0, 1] |}]
+
+let%expect_test "distribution arguments must be floats" =
+  print_eval "x ~ Uniform(0, 1);";
+  print_eval "x ~ Exponential(1);";
+  print_eval "x ~ Bernoulli(true);";
+  [%expect
+    {|
+    runtime error: Type_error: Uniform can only be instatntiated with two Floats
+    runtime error: Type_error: Exponential can only be instatntiated with a Float
+    runtime error: Type_error: Bernoulli can only be instatntiated with a Float
     |}]
 
 let%expect_test "observing a variable twice" =
@@ -121,7 +139,8 @@ let%expect_test "defining an observed variable with =" =
 let%expect_test "redefining a variable with ~" =
   print_eval "x = 1; x ~ Uniform(0.0, 1.0);";
   print_eval "x ~ Uniform(0.0, 1.0); x ~ Uniform(5.0, 6.0);";
-  [%expect {|
+  [%expect
+    {|
     runtime error: Redefined_variable: x was defined multiple times
     runtime error: Redefined_variable: x was defined multiple times
     |}]
@@ -129,8 +148,10 @@ let%expect_test "redefining a variable with ~" =
 (* Known gap (see TODO.md): an observation that no ~ uses is ignored. *)
 let%expect_test "observation without a matching ~" =
   print_eval "observe z 1.0;";
-  print_eval "z = 1.0 + 1.0; x ~ Uniform(0.0, 1.0); observe x 0.5; observe y 1.0;";
-  [%expect {|
+  print_eval
+    "z = 1.0 + 1.0; x ~ Uniform(0.0, 1.0); observe x 0.5; observe y 1.0;";
+  [%expect
+    {|
     log_weight = 0
     x = (Continuous 0.5)
     z = (Continuous 2.)

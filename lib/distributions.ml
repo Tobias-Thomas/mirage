@@ -29,17 +29,6 @@ let bernoulli ~p =
   if p >= 0. && p <= 1. then Ok (Bernoulli p)
   else Error (Printf.sprintf "Bernoulli(%g): expected p in [0, 1]" p)
 
-let of_name name args =
-  let any d = Any d in
-  match (name, args) with
-  | "Uniform", [ low; high ] -> Result.map any (uniform ~low ~high)
-  | "Uniform", _ -> Error "Uniform requires two arguments"
-  | "Exponential", [ lambda ] -> Result.map any (exponential ~lambda)
-  | "Exponential", _ -> Error "Exponential requires one argument"
-  | "Bernoulli", [ p ] -> Result.map any (bernoulli ~p)
-  | "Bernoulli", _ -> Error "Bernoulli requires one argument"
-  | _, _ -> Error "unknown distribution name"
-
 let logpdf : type a. a distribution -> a -> float =
  fun dist x ->
   match dist with

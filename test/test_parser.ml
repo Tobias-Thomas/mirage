@@ -17,7 +17,7 @@ let%expect_test "random assignment" =
     {|
     { stmts =
       [(LetRand ("x",
-          ("Uniform", [(Literal (Continuous 0.)); (Literal (Continuous 1.))])))
+          (PUniform ((Literal (Continuous 0.)), (Literal (Continuous 1.))))))
         ];
       observations = [] }
     |}]
@@ -43,8 +43,8 @@ let%expect_test "multiple statements" =
     {|
     { stmts =
       [(LetRand ("p",
-          ("Uniform", [(Literal (Continuous 0.)); (Literal (Continuous 1.))])));
-        (LetRand ("c", ("Bernoulli", [(Var "p")])))];
+          (PUniform ((Literal (Continuous 0.)), (Literal (Continuous 1.))))));
+        (LetRand ("c", (PBernoulli (Var "p"))))];
       observations = [("c", (Binary true))] }
     |}]
 
@@ -128,26 +128,36 @@ let%expect_test "equality" =
   [%expect {| (BinOp (Eq, (Var "a"), (Literal (Discrete 1)))) |}]
 
 let%expect_test "distributions" =
-  print_dist "Foo()";
-  print_dist "Normal(mu + 1.0, 2.0 * s)";
+  print_dist "Uniform(0.0, 1.0)";
+  print_dist "Exponential(2.0)";
+  print_dist "Bernoulli(0.3)";
   [%expect
     {|
-    ("Foo", [])
-    ("Normal",
-     [(BinOp (Add, (Var "mu"), (Literal (Continuous 1.))));
-       (BinOp (Mul, (Literal (Continuous 2.)), (Var "s")))])
+    (PUniform ((Literal (Continuous 0.)), (Literal (Continuous 1.))))
+    (PExponential (Literal (Continuous 2.)))
+    (PBernoulli (Literal (Continuous 0.3)))
+    |}]
+
+let%expect_test "distribution arguments can be expressions" =
+  print_dist "Uniform(mu + 1.0, 2.0 * s)";
+  print_dist "Bernoulli((p))";
+  [%expect
+    {|
+    (PUniform ((BinOp (Add, (Var "mu"), (Literal (Continuous 1.)))),
+       (BinOp (Mul, (Literal (Continuous 2.)), (Var "s")))))
+    (PBernoulli (Var "p"))
     |}]
 
 let%expect_test "unary minus" =
   print_expr "-1.0";
-  print_program "x ~ Normal(-1.0, 1.0);";
+  print_program "x ~ Uniform(-1.0, 1.0);";
   [%expect
     {|
     (UnOp (Neg, (Literal (Continuous 1.))))
     { stmts =
       [(LetRand ("x",
-          ("Normal",
-           [(UnOp (Neg, (Literal (Continuous 1.)))); (Literal (Continuous 1.))])
+          (PUniform ((UnOp (Neg, (Literal (Continuous 1.)))),
+             (Literal (Continuous 1.))))
           ))
         ];
       observations = [] }
@@ -204,7 +214,31 @@ let%expect_test "unclosed parenthesis" =
 
 let%expect_test "missing comma in arguments" =
   print_program "x ~ Uniform(1 2);";
-  [%expect {| error: Failure("expected , or ) but got other token") |}]
+  [%expect {| error: Failure("wrong token") |}]
+
+let%expect_test "unknown distribution" =
+  print_program "x ~ Foo();";
+  print_program "x ~ Normal(0.0, 1.0);";
+  print_program "x ~ uniform(0.0, 1.0);";
+  [%expect
+    {|
+    error: Failure("unknown distribution name")
+    error: Failure("unknown distribution name")
+    error: Failure("expected a Distribution name")
+    |}]
+
+let%expect_test "wrong number of distribution arguments" =
+  print_program "x ~ Uniform(1.0);";
+  print_program "x ~ Uniform(0.0, 1.0, 2.0);";
+  print_program "x ~ Exponential();";
+  print_program "x ~ Bernoulli(0.1, 0.2);";
+  [%expect
+    {|
+    error: Failure("wrong token")
+    error: Failure("wrong token")
+    error: Failure("wrong token")
+    error: Failure("wrong token")
+    |}]
 
 let%expect_test "malformed observations" =
   print_program "observe;";

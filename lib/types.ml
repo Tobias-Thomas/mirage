@@ -20,7 +20,11 @@ type expr =
   | UnOp of un_op * expr
 [@@deriving show { with_path = false }]
 
-type dist = string * expr list [@@deriving show { with_path = false }]
+type dist =
+  | PUniform of expr * expr
+  | PExponential of expr
+  | PBernoulli of expr
+[@@deriving show { with_path = false }]
 
 type stmt = LetDet of string * expr | LetRand of string * dist
 [@@deriving show { with_path = false }]

@@ -103,25 +103,25 @@ and parse_atom state =
 and parse_dist state =
   match peek_advance state with
   | UPPER_IDENT d ->
-      let expr_list = parse_expr_list state in
-      (d, expr_list)
+      expect state LPAREN;
+      let dist =
+        match d with
+        | "Bernoulli" ->
+            let p = parse_expr state in
+            PBernoulli p
+        | "Exponential" ->
+            let lambda = parse_expr state in
+            PExponential lambda
+        | "Uniform" ->
+            let low = parse_expr state in
+            expect state COMMA;
+            let high = parse_expr state in
+            PUniform (low, high)
+        | _ -> failwith "unknown distribution name"
+      in
+      expect state RPAREN;
+      dist
   | _ -> failwith "expected a Distribution name"
-
-and parse_expr_list state =
-  expect state LPAREN;
-  parse_expr_list_inner state
-
-and parse_expr_list_inner state =
-  match peek state with
-  | RPAREN ->
-      advance state;
-      []
-  | _ -> (
-      let expr = parse_expr state in
-      match peek_advance state with
-      | COMMA -> expr :: parse_expr_list_inner state
-      | RPAREN -> [ expr ]
-      | _ -> failwith "expected , or ) but got other token")
 
 and parse_string state =
   match peek_advance state with
