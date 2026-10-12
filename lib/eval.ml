@@ -12,6 +12,16 @@ module Env = Map.Make (String)
 
 type trace = { env : value Env.t; log_weight : float }
 
+let to_value : type a. a Distributions.kind -> a -> Types.value =
+ fun kind v -> match kind with Float -> Continuous v | Bool -> Binary v
+
+let of_value : type a. Types.value -> a Distributions.kind -> a =
+ fun v kind ->
+  match (kind, v) with
+  | Float, Continuous f -> f
+  | Bool, Binary b -> b
+  | _ -> raise (Runtime_error (Type_error "Conversion failed"))
+
 let rec eval_expr env expr =
   match expr with
   | Literal v -> v
@@ -81,19 +91,24 @@ let eval_stmt rng obs_map trace stmt =
              (Redefined_variable
                 (Printf.sprintf "%s was defined multiple times" var)))
       else
-        let dist = eval_dist trace.env name args in
-        match Env.find_opt var obs_map with
-        | Some v ->
-            {
-              env = Env.add var v trace.env;
-              log_weight =
-                trace.log_weight +. Distributions.logpdf dist (float_of_value v);
-            }
-        | None ->
-            {
-              trace with
-              env = Env.add var (Samplers.sample rng dist) trace.env;
-            })
+        match eval_dist trace.env name args with
+        | Any dist -> (
+            let k = Distributions.kind dist in
+            match Env.find_opt var obs_map with
+            | Some v ->
+                {
+                  env = Env.add var v trace.env;
+                  log_weight =
+                    trace.log_weight +. Distributions.logpdf dist (of_value v k);
+                }
+            | None ->
+                {
+                  trace with
+                  env =
+                    Env.add var
+                      (to_value k (Samplers.sample rng dist))
+                      trace.env;
+                }))
 
 let eval_obs obs_map obs =
   let var, value = obs in

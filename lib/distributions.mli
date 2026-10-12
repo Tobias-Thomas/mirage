@@ -1,13 +1,17 @@
-type distribution = private
-  | Uniform of float * float (* low, high *)
-  | Exponential of float (* lambda *)
-  | Bernoulli of float (* p *)
+type _ distribution = private
+  | Uniform : float * float -> float distribution
+  | Exponential : float -> float distribution
+  | Bernoulli : float -> bool distribution
 
-val uniform : low:float -> high:float -> (distribution, string) result
-val exponential : lambda:float -> (distribution, string) result
-val bernoulli : p:float -> (distribution, string) result
-val of_name : string -> float list -> (distribution, string) result
-val logpdf : distribution -> float -> float
-val pdf : distribution -> float -> float
-val cdf : distribution -> float -> float
-val quantile : distribution -> float -> float option
+type any_distribution = Any : 'a distribution -> any_distribution
+type _ kind = Float : float kind | Bool : bool kind
+
+val kind : 'a distribution -> 'a kind
+val uniform : low:float -> high:float -> (float distribution, string) result
+val exponential : lambda:float -> (float distribution, string) result
+val bernoulli : p:float -> (bool distribution, string) result
+val of_name : string -> float list -> (any_distribution, string) result
+val logpdf : 'a distribution -> 'a -> float
+val pdf : 'a distribution -> 'a -> float
+val cdf : 'a distribution -> 'a -> float
+val quantile : 'a distribution -> float -> 'a option
