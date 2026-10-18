@@ -15,18 +15,21 @@ let peek_advance state =
 let expect state token =
   if peek_advance state <> token then failwith "wrong token"
 
+let value_from_expr_opt e =
+  match e with
+  | Literal v -> Some v
+  | UnOp (Neg, Literal (Continuous f)) -> Some (Continuous (-.f))
+  | UnOp (Neg, Literal (Discrete i)) -> Some (Discrete (-i))
+  | _ -> None
+
 let rec parse_stmt state =
   match peek_advance state with
   | OBSERVE -> (
       let variable = parse_string state in
       let val_expr = parse_atom state in
-      match val_expr with
-      | Literal v -> Either.right (variable, v)
-      | UnOp (Neg, Literal (Continuous f)) ->
-          Either.right (variable, Continuous (-.f))
-      | UnOp (Neg, Literal (Discrete i)) ->
-          Either.right (variable, Discrete (-i))
-      | _ -> failwith "expected a value after observe")
+      match value_from_expr_opt val_expr with
+      | Some v -> Either.right (variable, v)
+      | None -> failwith "The observed value must be a concrete value")
   | IDENT var -> (
       match peek_advance state with
       | DET ->

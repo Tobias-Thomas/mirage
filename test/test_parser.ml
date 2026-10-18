@@ -251,7 +251,7 @@ let%expect_test "malformed observations" =
     error: Failure("expected string but got other token")
     error: Failure("wrong token")
     error: Failure("expected string but got other token")
-    error: Failure("expected a value after observe")
+    error: Failure("The observed value must be a concrete value")
     error: Failure("wrong token")
     |}]
 
