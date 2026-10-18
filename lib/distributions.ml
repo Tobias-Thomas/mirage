@@ -58,3 +58,14 @@ let quantile : type a. a distribution -> float -> a option =
     | Exponential lambda -> Some (-.log (1. -. p) /. lambda)
     | Bernoulli q -> Some (p > 1. -. q)
   else None
+
+let sample : type a. Random.State.t -> a distribution -> a =
+ fun rng dist ->
+  match dist with
+  | Uniform (low, high) -> low +. Random.State.float rng (high -. low)
+  | Exponential lambda ->
+      let urand = Random.State.float rng 1. in
+      -.log (1. -. urand) /. lambda
+  | Bernoulli p ->
+      let urand = Random.State.float rng 1. in
+      p > urand

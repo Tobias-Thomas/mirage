@@ -132,7 +132,7 @@ let eval_stmt rng obs_map trace stmt =
                   trace with
                   env =
                     Env.add var
-                      (to_value k (Samplers.sample rng dist))
+                      (to_value k (Distributions.sample rng dist))
                       trace.env;
                 }))
 

@@ -14,3 +14,4 @@ val logpdf : 'a distribution -> 'a -> float
 val pdf : 'a distribution -> 'a -> float
 val cdf : 'a distribution -> 'a -> float
 val quantile : 'a distribution -> float -> 'a option
+val sample : Random.State.t -> 'a distribution -> 'a
