@@ -13,7 +13,7 @@ module Env = Map.Make (String)
 
 type trace = { env : value Env.t; log_weight : float }
 
-let to_value : type a. a kind -> a -> Types.value =
+let to_value : type a. a kind -> a -> value =
  fun kind v -> match kind with Float -> Continuous v | Bool -> Binary v
 
 let of_value : type a. Types.value -> a kind -> a =
@@ -83,14 +83,14 @@ let eval_dist env dist =
       | _ ->
           raise
             (Runtime_error
-               (Type_error "Bernoulli can only be instatntiated with a Float")))
+               (Type_error "Bernoulli can only be instantiated with a Float")))
   | PExponential lambda -> (
       match eval_expr env lambda with
       | Continuous f -> of_result_dist (Distributions.exponential ~lambda:f)
       | _ ->
           raise
             (Runtime_error
-               (Type_error "Exponential can only be instatntiated with a Float"))
+               (Type_error "Exponential can only be instantiated with a Float"))
       )
   | PUniform (low, high) -> (
       match (eval_expr env low, eval_expr env high) with
@@ -99,8 +99,7 @@ let eval_dist env dist =
       | _ ->
           raise
             (Runtime_error
-               (Type_error "Uniform can only be instatntiated with two Floats"))
-      )
+               (Type_error "Uniform can only be instantiated with two Floats")))
 
 let eval_stmt rng obs_map trace stmt =
   match stmt with

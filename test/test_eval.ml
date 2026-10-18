@@ -106,9 +106,9 @@ let%expect_test "distribution arguments must be floats" =
   print_eval "x ~ Bernoulli(true);";
   [%expect
     {|
-    runtime error: Type_error: Uniform can only be instatntiated with two Floats
-    runtime error: Type_error: Exponential can only be instatntiated with a Float
-    runtime error: Type_error: Bernoulli can only be instatntiated with a Float
+    runtime error: Type_error: Uniform can only be instantiated with two Floats
+    runtime error: Type_error: Exponential can only be instantiated with a Float
+    runtime error: Type_error: Bernoulli can only be instantiated with a Float
     |}]
 
 let%expect_test "observing a variable twice" =
