@@ -1,4 +1,20 @@
 open Types
+open Eval
+
+type state = {
+  program : program option;
+  observation_map : value Env.t;
+  rng : Random.State.t;
+  last_samples : (trace list * float list) option;
+}
+
+let init () =
+  {
+    program = None;
+    observation_map = Env.empty;
+    rng = Random.State.make_self_init ();
+    last_samples = None;
+  }
 
 type command =
   | Load of string
@@ -34,3 +50,64 @@ let parse_command s =
   | "observe" :: _ -> Error "Observe requires exactly two arguments"
   | command :: _ -> Error (Printf.sprintf "%s is not a known command" command)
   | [] -> Error "The command should not be empty"
+
+let program_from_path path =
+  let channel = open_in path in
+  Fun.protect
+    ~finally:(fun () -> close_in channel)
+    (fun () ->
+      let lexbuf = Lexing.from_channel channel in
+      let parse_state = Parser.make_parser lexbuf in
+      Parser.parse_program parse_state)
+
+let execute state command =
+  match command with
+  | Observe (variable, value) ->
+      let new_state =
+        {
+          state with
+          observation_map = Env.add variable value state.observation_map;
+          last_samples = None;
+        }
+      in
+      if Env.mem variable state.observation_map then
+        Ok (new_state, Printf.sprintf "Replaced observation for %s" variable)
+      else Ok (new_state, Printf.sprintf "Added observation for %s" variable)
+  | Unobserve variable ->
+      if Env.mem variable state.observation_map then
+        Ok
+          ( {
+              state with
+              observation_map = Env.remove variable state.observation_map;
+              last_samples = None;
+            },
+            Printf.sprintf "Removed observation for %s" variable )
+      else Error (Printf.sprintf "%s had no observation before" variable)
+  | Seed s ->
+      Ok ({ state with rng = Random.State.make [| s |] }, "Updated random seed")
+  | Sample n -> (
+      match state.program with
+      | Some program -> (
+          match
+            Inference.sample state.rng
+              { program with observations = Env.bindings state.observation_map }
+              n
+          with
+          | Ok samples ->
+              Ok ({ state with last_samples = Some samples }, "Done sampling")
+          | Error e -> Error (Eval.string_of_error e))
+      | None -> Error "Can not sample without loading a program")
+  | Load path -> (
+      try
+        let program = program_from_path path in
+        Ok
+          ( {
+              state with
+              program = Some program;
+              last_samples = None;
+              observation_map = Env.of_list program.observations;
+            },
+            "Loaded program" )
+      with
+      | Sys_error s -> Error s
+      | Failure s -> Error s)

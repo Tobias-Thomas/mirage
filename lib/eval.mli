@@ -4,6 +4,8 @@ type error =
   | Type_error of string
   | Invalid_distribution of string
 
+val string_of_error : error -> string
+
 exception Runtime_error of error
 
 module Env : Map.S with type key = string

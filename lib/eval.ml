@@ -7,6 +7,13 @@ type error =
   | Type_error of string
   | Invalid_distribution of string
 
+let string_of_error e =
+  match e with
+  | Unbound_variable e -> Printf.sprintf "Unbound Variable: %s" e
+  | Redefined_variable e -> Printf.sprintf "Redefined Variable: %s" e
+  | Type_error e -> Printf.sprintf "Type Error: %s" e
+  | Invalid_distribution e -> Printf.sprintf "Invalid Distribution: %s" e
+
 exception Runtime_error of error
 
 module Env = Map.Make (String)
