@@ -120,6 +120,11 @@ and parse_dist state =
             expect state COMMA;
             let high = parse_expr state in
             PUniform (low, high)
+        | "Normal" | "Gaussian" ->
+            let mu = parse_expr state in
+            expect state COMMA;
+            let sigma = parse_expr state in
+            PNormal (mu, sigma)
         | _ -> failwith "unknown distribution name"
       in
       expect state RPAREN;

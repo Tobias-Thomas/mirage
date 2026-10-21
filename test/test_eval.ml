@@ -224,6 +224,19 @@ let%expect_test "observed variable is bound and scored" =
     log_weight = -0.693147
     |}]
 
+let%expect_test "normal observation scored under a sampled mean" =
+  print_eval "mu = 1.0; x ~ Normal(mu, 2.0); observe x 3.0;";
+  print_eval "x ~ Normal(0.0, 0.0);";
+  print_eval "x ~ Normal(0, 1);";
+  [%expect
+    {|
+    mu = (Continuous 1.)
+    x = (Continuous 3.)
+    log_weight = -2.11209
+    runtime error: Invalid_distribution: Normal(0, 0): expected finite values and sigma > 0.
+    runtime error: Type_error: Normal can only be instantiated with two Floats
+    |}]
+
 let%expect_test "observed boolean" =
   print_eval "c ~ Bernoulli(0.25); observe c true;";
   print_eval "c ~ Bernoulli(0.25); observe c false;";

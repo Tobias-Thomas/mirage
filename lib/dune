@@ -1,6 +1,7 @@
 (library
  (name mirage)
  (libraries)
+ (private_modules special_functions)
  (preprocess
   (pps ppx_deriving.show)))
 

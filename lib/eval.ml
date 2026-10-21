@@ -107,6 +107,14 @@ let eval_dist env dist =
           raise
             (Runtime_error
                (Type_error "Uniform can only be instantiated with two Floats")))
+  | PNormal (mu, sigma) -> (
+      match (eval_expr env mu, eval_expr env sigma) with
+      | Continuous f1, Continuous f2 ->
+          of_result_dist (Distributions.normal ~mu:f1 ~sigma:f2)
+      | _ ->
+          raise
+            (Runtime_error
+               (Type_error "Normal can only be instantiated with two Floats")))
 
 let eval_stmt rng obs_map trace stmt =
   match stmt with

@@ -2,6 +2,7 @@ type _ distribution =
   | Uniform : float * float -> float distribution
   | Exponential : float -> float distribution
   | Bernoulli : float -> bool distribution
+  | Normal : float * float -> float distribution
 
 type any_distribution = Any : 'a distribution -> any_distribution
 type _ kind = Float : float kind | Bool : bool kind
@@ -10,6 +11,7 @@ let kind : type a. a distribution -> a kind = function
   | Uniform _ -> Float
   | Exponential _ -> Float
   | Bernoulli _ -> Bool
+  | Normal _ -> Float
 
 let uniform ~low ~high =
   if Float.is_finite low && Float.is_finite high && low < high then
@@ -29,6 +31,14 @@ let bernoulli ~p =
   if p >= 0. && p <= 1. then Ok (Bernoulli p)
   else Error (Printf.sprintf "Bernoulli(%g): expected p in [0, 1]" p)
 
+let normal ~mu ~sigma =
+  if Float.is_finite mu && Float.is_finite sigma && sigma > 0. then
+    Ok (Normal (mu, sigma))
+  else
+    Error
+      (Printf.sprintf "Normal(%g, %g): expected finite values and sigma > 0." mu
+         sigma)
+
 let logpdf : type a. a distribution -> a -> float =
  fun dist x ->
   match dist with
@@ -37,6 +47,10 @@ let logpdf : type a. a distribution -> a -> float =
   | Exponential lambda ->
       if x < 0. then Float.neg_infinity else log lambda -. (lambda *. x)
   | Bernoulli p -> if x then log p else log (1. -. p)
+  | Normal (mu, sigma) ->
+      -.(log (2. *. Float.pi) /. 2.)
+      -. log sigma
+      -. (((x -. mu) ** 2.) /. (2. *. (sigma ** 2.)))
 
 let pdf dist x = exp (logpdf dist x)
 
@@ -49,6 +63,7 @@ let cdf : type a. a distribution -> a -> float =
       else (x -. low) /. (high -. low)
   | Exponential lambda -> if x < 0. then 0. else 1. -. Float.exp (-.lambda *. x)
   | Bernoulli p -> if x then 1. else 1. -. p
+  | Normal (mu, sigma) -> 0.5 *. Float.erfc (-.(x -. mu) /. (sigma *. sqrt 2.))
 
 let quantile : type a. a distribution -> float -> a option =
  fun dist p ->
@@ -57,6 +72,10 @@ let quantile : type a. a distribution -> float -> a option =
     | Uniform (low, high) -> Some (low +. (p *. (high -. low)))
     | Exponential lambda -> Some (-.log (1. -. p) /. lambda)
     | Bernoulli q -> Some (p > 1. -. q)
+    | Normal (mu, sigma) ->
+        if p = 0. then Some Float.neg_infinity
+        else if p = 1. then Some Float.infinity
+        else Some (mu +. (Special_functions.acklam_approximation p *. sigma))
   else None
 
 let sample : type a. Random.State.t -> a distribution -> a =
@@ -69,3 +88,8 @@ let sample : type a. Random.State.t -> a distribution -> a =
   | Bernoulli p ->
       let urand = Random.State.float rng 1. in
       p > urand
+  | Normal (mu, sigma) ->
+      let u1 = Random.State.float rng 1. in
+      let u2 = Random.State.float rng 1. in
+      let z = sqrt (-2. *. log u1) *. cos (2. *. Float.pi *. u2) in
+      mu +. (z *. sigma)
