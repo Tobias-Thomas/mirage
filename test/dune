@@ -4,3 +4,6 @@
  (libraries mirage)
  (preprocess
   (pps ppx_expect)))
+
+(cram
+ (deps %{bin:mirage}))
