@@ -9,6 +9,7 @@ type command =
   | Observe of string * Types.value
   | Unobserve of string
   | Mean of string
+  | Time of command
 
 val parse_command : string -> (command, string) result
 val execute : state -> command -> (state * string, string) result

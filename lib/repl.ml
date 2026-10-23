@@ -23,8 +23,9 @@ type command =
   | Observe of string * value
   | Unobserve of string
   | Mean of string
+  | Time of command
 
-let parse_command s =
+let rec parse_command s =
   match List.filter (fun w -> w <> "") (String.split_on_char ' ' s) with
   | [ "load"; path ] -> Ok (Load path)
   | "load" :: _ -> Error "Load requires exactly one argument"
@@ -51,6 +52,11 @@ let parse_command s =
   | "observe" :: _ -> Error "Observe requires exactly two arguments"
   | [ "mean"; variable ] -> Ok (Mean variable)
   | "mean" :: _ -> Error "Mean requires exactly one argument"
+  | "time" :: tail -> (
+      match parse_command (String.concat " " tail) with
+      | Ok cmd -> Ok (Time cmd)
+      | Error e ->
+          Error (Printf.sprintf "Failed parsing command after time: %s" e))
   | command :: _ -> Error (Printf.sprintf "%s is not a known command" command)
   | [] -> Error "The command should not be empty"
 
@@ -63,7 +69,7 @@ let program_from_path path =
       let parse_state = Parser.make_parser lexbuf in
       Parser.parse_program parse_state)
 
-let execute state command =
+let rec execute state command =
   match command with
   | Observe (variable, value) ->
       let new_state =
@@ -128,3 +134,12 @@ let execute state command =
       with
       | Sys_error s -> Error s
       | Failure s -> Error s)
+  | Time cmd -> (
+      let s0 = Sys.time () in
+      let res = execute state cmd in
+      let s1 = Sys.time () in
+      let s_diff = s1 -. s0 in
+      match res with
+      | Ok (new_state, msg) ->
+          Ok (new_state, Printf.sprintf "%s\n\tCommand took %g s" msg s_diff)
+      | Error e -> Error e)

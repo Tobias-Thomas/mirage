@@ -1,6 +1,6 @@
 open Mirage
 
-let show_command (c : Repl.command) =
+let rec show_command (c : Repl.command) =
   match c with
   | Load path -> "Load " ^ path
   | Sample n -> Printf.sprintf "Sample %d" n
@@ -8,6 +8,7 @@ let show_command (c : Repl.command) =
   | Observe (x, v) -> Printf.sprintf "Observe %s %s" x (Types.show_value v)
   | Unobserve x -> "Unobserve " ^ x
   | Mean x -> "Mean " ^ x
+  | Time c -> "Time " ^ show_command c
 
 let print_parse s =
   match Repl.parse_command s with
@@ -320,4 +321,56 @@ let%expect_test "mean errors" =
     Replaced observation for c
     > mean p
     error: Can only run mean after sampling
+    |}]
+
+(* time *)
+
+let%expect_test "parse time" =
+  List.iter print_parse
+    [ "time sample 10"; "time time sample 10"; "time"; "time smaple 10" ];
+  [%expect
+    {|
+    Time Sample 10
+    Time Time Sample 10
+    error: Failed parsing command after time: The command should not be empty
+    error: Failed parsing command after time: smaple is not a known command
+    |}]
+
+(* The duration differs on every run, so timing lines ("Command took <number>
+   s") are only checked for their shape; all other lines are printed. *)
+let%expect_test "time runs the command and keeps its new state" =
+  let state = ref (Repl.init ()) in
+  let print_line l =
+    if String.starts_with ~prefix:"\tCommand took" l then
+      Printf.printf "<timing line ok: %b>\n"
+        (Scanf.sscanf_opt l "\tCommand took %f s%!" Fun.id <> None)
+    else print_endline l
+  in
+  let run line =
+    match Result.bind (Repl.parse_command line) (Repl.execute !state) with
+    | Ok (new_state, msg) ->
+        state := new_state;
+        List.iter print_line (String.split_on_char '\n' msg)
+    | Error msg -> print_endline ("error: " ^ msg)
+  in
+  run ("time load " ^ model_file "coin.mrg" coin);
+  run "time seed 1";
+  run "time sample 1000";
+  (* The samples from the timed command are kept in the state. *)
+  run "mean c";
+  run "time time mean c";
+  run "time unobserve z";
+  [%expect
+    {|
+    Loaded program
+    <timing line ok: true>
+    Updated random seed
+    <timing line ok: true>
+    Done sampling
+    <timing line ok: true>
+    c has a mean of 1
+    c has a mean of 1
+    <timing line ok: true>
+    <timing line ok: true>
+    error: z had no observation before
     |}]
