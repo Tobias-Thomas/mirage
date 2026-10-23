@@ -9,6 +9,7 @@ let rec show_command (c : Repl.command) =
   | Unobserve x -> "Unobserve " ^ x
   | Mean x -> "Mean " ^ x
   | Time c -> "Time " ^ show_command c
+  | Quit -> "Quit"
 
 let print_parse s =
   match Repl.parse_command s with
@@ -22,25 +23,29 @@ let model_file name contents =
   name
 
 (* Runs each line through [parse_command] and [execute] like the REPL does,
-   printing the message or the error, and keeping the old state on errors. *)
+   printing the message or the error, keeping the old state on errors, and
+   stopping (like bin/main.ml) when [execute] says not to continue. *)
 let run_session lines =
-  ignore
-    (List.fold_left
-       (fun state line ->
-         Printf.printf "> %s\n" line;
-         match Repl.parse_command line with
-         | Error msg ->
-             print_endline ("error: " ^ msg);
-             state
-         | Ok cmd -> (
-             match Repl.execute state cmd with
-             | Ok (state, msg) ->
-                 print_endline msg;
-                 state
-             | Error msg ->
-                 print_endline ("error: " ^ msg);
-                 state))
-       (Repl.init ()) lines)
+  let rec loop state lines =
+    match lines with
+    | [] -> ()
+    | line :: rest -> (
+        Printf.printf "> %s\n" line;
+        match Repl.parse_command line with
+        | Error msg ->
+            print_endline ("error: " ^ msg);
+            loop state rest
+        | Ok cmd -> (
+            match Repl.execute state cmd with
+            | Ok (_, _, false) -> print_endline "(session ended)"
+            | Ok (state, msg, true) ->
+                print_endline msg;
+                loop state rest
+            | Error msg ->
+                print_endline ("error: " ^ msg);
+                loop state rest))
+  in
+  loop (Repl.init ()) lines
 
 let coin = "p ~ Uniform(0.0, 1.0);\nc ~ Bernoulli(p);\nobserve c true;\n"
 
@@ -258,12 +263,12 @@ let mean_after lines var =
     List.fold_left
       (fun state line ->
         match Result.bind (Repl.parse_command line) (Repl.execute state) with
-        | Ok (state, _) -> state
+        | Ok (state, _, _) -> state
         | Error msg -> failwith (line ^ ": " ^ msg))
       (Repl.init ()) lines
   in
   match Repl.execute state (Mean var) with
-  | Ok (_, msg) ->
+  | Ok (_, msg, _) ->
       float_of_string (List.hd (List.rev (String.split_on_char ' ' msg)))
   | Error msg -> failwith msg
 
@@ -348,7 +353,7 @@ let%expect_test "time runs the command and keeps its new state" =
   in
   let run line =
     match Result.bind (Repl.parse_command line) (Repl.execute !state) with
-    | Ok (new_state, msg) ->
+    | Ok (new_state, msg, _) ->
         state := new_state;
         List.iter print_line (String.split_on_char '\n' msg)
     | Error msg -> print_endline ("error: " ^ msg)
@@ -373,4 +378,33 @@ let%expect_test "time runs the command and keeps its new state" =
     <timing line ok: true>
     <timing line ok: true>
     error: z had no observation before
+    |}]
+
+(* quit *)
+
+let%expect_test "parse quit" =
+  List.iter print_parse [ "quit"; "  quit  "; "quit now"; "time quit" ];
+  [%expect {|
+    Quit
+    Quit
+    error: Quit can only stand alone
+    Time Quit
+    |}]
+
+let%expect_test "quit ends the session, also when timed" =
+  run_session [ "seed 1"; "quit"; "seed 2" ];
+  run_session [ "time quit"; "seed 2" ];
+  (* A malformed quit is an ordinary error and the session goes on. *)
+  run_session [ "quit now"; "seed 2" ];
+  [%expect {|
+    > seed 1
+    Updated random seed
+    > quit
+    (session ended)
+    > time quit
+    (session ended)
+    > quit now
+    error: Quit can only stand alone
+    > seed 2
+    Updated random seed
     |}]

@@ -10,6 +10,7 @@ type command =
   | Unobserve of string
   | Mean of string
   | Time of command
+  | Quit
 
 val parse_command : string -> (command, string) result
-val execute : state -> command -> (state * string, string) result
+val execute : state -> command -> (state * string * bool, string) result

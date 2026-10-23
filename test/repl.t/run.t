@@ -25,3 +25,18 @@ Errors are reported (on stderr) and the session continues.
 End of input (Ctrl-D) ends the session with exit code 0.
 
   $ printf '' | mirage > /dev/null
+
+quit ends the session; the commands after it are not run. A timed quit quits
+too, and "quit" with arguments is an error.
+
+  $ printf 'seed 1\nquit\nseed 2\n' | mirage | sed 's/> /mirage> /g'
+  mirage> 	Updated random seed
+  mirage> 
+
+  $ printf 'time quit\nseed 2\n' | mirage | sed 's/> /mirage> /g'
+  mirage> 
+
+  $ printf 'quit now\nseed 2\n' | mirage 2>&1 | sed 's/> /mirage> /g'
+  mirage> Quit can only stand alone
+  mirage> 	Updated random seed
+  mirage> 

@@ -24,6 +24,7 @@ type command =
   | Unobserve of string
   | Mean of string
   | Time of command
+  | Quit
 
 let rec parse_command s =
   match List.filter (fun w -> w <> "") (String.split_on_char ' ' s) with
@@ -57,6 +58,8 @@ let rec parse_command s =
       | Ok cmd -> Ok (Time cmd)
       | Error e ->
           Error (Printf.sprintf "Failed parsing command after time: %s" e))
+  | [ "quit" ] -> Ok Quit
+  | "quit" :: _ -> Error "Quit can only stand alone"
   | command :: _ -> Error (Printf.sprintf "%s is not a known command" command)
   | [] -> Error "The command should not be empty"
 
@@ -80,8 +83,12 @@ let rec execute state command =
         }
       in
       if Env.mem variable state.observation_map then
-        Ok (new_state, Printf.sprintf "Replaced observation for %s" variable)
-      else Ok (new_state, Printf.sprintf "Added observation for %s" variable)
+        Ok
+          ( new_state,
+            Printf.sprintf "Replaced observation for %s" variable,
+            true )
+      else
+        Ok (new_state, Printf.sprintf "Added observation for %s" variable, true)
   | Unobserve variable ->
       if Env.mem variable state.observation_map then
         Ok
@@ -90,10 +97,14 @@ let rec execute state command =
               observation_map = Env.remove variable state.observation_map;
               last_samples = None;
             },
-            Printf.sprintf "Removed observation for %s" variable )
+            Printf.sprintf "Removed observation for %s" variable,
+            true )
       else Error (Printf.sprintf "%s had no observation before" variable)
   | Seed s ->
-      Ok ({ state with rng = Random.State.make [| s |] }, "Updated random seed")
+      Ok
+        ( { state with rng = Random.State.make [| s |] },
+          "Updated random seed",
+          true )
   | Sample n -> (
       match state.program with
       | Some program -> (
@@ -103,7 +114,10 @@ let rec execute state command =
               n
           with
           | Ok samples ->
-              Ok ({ state with last_samples = Some samples }, "Done sampling")
+              Ok
+                ( { state with last_samples = Some samples },
+                  "Done sampling",
+                  true )
           | Error e -> Error (Eval.string_of_error e))
       | None -> Error "Can not sample without loading a program")
   | Mean variable -> (
@@ -117,7 +131,7 @@ let rec execute state command =
                   acc +. (xn *. w))
                 0. traces weights
             in
-            Ok (state, Printf.sprintf "%s has a mean of %g" variable mean)
+            Ok (state, Printf.sprintf "%s has a mean of %g" variable mean, true)
           else Error (Printf.sprintf "%s is not part of the program" variable)
       | None -> Error "Can only run mean after sampling")
   | Load path -> (
@@ -130,7 +144,8 @@ let rec execute state command =
               last_samples = None;
               observation_map = Env.of_list program.observations;
             },
-            "Loaded program" )
+            "Loaded program",
+            true )
       with
       | Sys_error s -> Error s
       | Failure s -> Error s)
@@ -140,6 +155,10 @@ let rec execute state command =
       let s1 = Sys.time () in
       let s_diff = s1 -. s0 in
       match res with
-      | Ok (new_state, msg) ->
-          Ok (new_state, Printf.sprintf "%s\n\tCommand took %g s" msg s_diff)
+      | Ok (new_state, msg, continue) ->
+          Ok
+            ( new_state,
+              Printf.sprintf "%s\n\tCommand took %g s" msg s_diff,
+              continue )
       | Error e -> Error e)
+  | Quit -> Ok (state, "", false)

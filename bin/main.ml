@@ -15,12 +15,14 @@ let rec repl state =
           | Error msg ->
               prerr_endline msg;
               repl state
-          | Ok (new_state, message) ->
-              print_string "\t";
-              print_string message;
-              print_string "\n";
-              flush stdout;
-              repl new_state))
+          | Ok (new_state, message, continue) ->
+              if continue then (
+                print_string "\t";
+                print_string message;
+                print_string "\n";
+                flush stdout;
+                repl new_state)
+              else ()))
 
 let () =
   let state = Repl.init () in
