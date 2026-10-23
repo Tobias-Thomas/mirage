@@ -8,6 +8,7 @@ type command =
   | Seed of int
   | Observe of string * Types.value
   | Unobserve of string
+  | Mean of string
 
 val parse_command : string -> (command, string) result
 val execute : state -> command -> (state * string, string) result

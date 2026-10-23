@@ -22,6 +22,7 @@ type command =
   | Seed of int
   | Observe of string * value
   | Unobserve of string
+  | Mean of string
 
 let parse_command s =
   match List.filter (fun w -> w <> "") (String.split_on_char ' ' s) with
@@ -48,6 +49,8 @@ let parse_command s =
       | None -> Error (Printf.sprintf "%s must parse as a concrete value" value)
       )
   | "observe" :: _ -> Error "Observe requires exactly two arguments"
+  | [ "mean"; variable ] -> Ok (Mean variable)
+  | "mean" :: _ -> Error "Mean requires exactly one argument"
   | command :: _ -> Error (Printf.sprintf "%s is not a known command" command)
   | [] -> Error "The command should not be empty"
 
@@ -97,6 +100,20 @@ let execute state command =
               Ok ({ state with last_samples = Some samples }, "Done sampling")
           | Error e -> Error (Eval.string_of_error e))
       | None -> Error "Can not sample without loading a program")
+  | Mean variable -> (
+      match state.last_samples with
+      | Some (traces, weights) ->
+          if Env.mem variable (List.hd traces).env then
+            let mean =
+              List.fold_left2
+                (fun acc trace w ->
+                  let xn = float_of_value (Env.find variable trace.env) in
+                  acc +. (xn *. w))
+                0. traces weights
+            in
+            Ok (state, Printf.sprintf "%s has a mean of %g" variable mean)
+          else Error (Printf.sprintf "%s is not part of the program" variable)
+      | None -> Error "Can only run mean after sampling")
   | Load path -> (
       try
         let program = program_from_path path in
