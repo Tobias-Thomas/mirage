@@ -133,6 +133,8 @@ let%expect_test "distributions" =
   print_dist "Bernoulli(0.3)";
   print_dist "Normal(0.0, 1.0)";
   print_dist "Gaussian(0.0, 1.0)";
+  print_dist "Gamma(2.0, 3.0)";
+  print_dist "Beta(0.5, 0.5)";
   [%expect
     {|
     (PUniform ((Literal (Continuous 0.)), (Literal (Continuous 1.))))
@@ -140,6 +142,8 @@ let%expect_test "distributions" =
     (PBernoulli (Literal (Continuous 0.3)))
     (PNormal ((Literal (Continuous 0.)), (Literal (Continuous 1.))))
     (PNormal ((Literal (Continuous 0.)), (Literal (Continuous 1.))))
+    (PGamma ((Literal (Continuous 2.)), (Literal (Continuous 3.))))
+    (PBeta ((Literal (Continuous 0.5)), (Literal (Continuous 0.5))))
     |}]
 
 let%expect_test "distribution arguments can be expressions" =
@@ -222,7 +226,7 @@ let%expect_test "missing comma in arguments" =
 
 let%expect_test "unknown distribution" =
   print_program "x ~ Foo();";
-  print_program "x ~ Gamma(1.0, 1.0);";
+  print_program "x ~ Poisson(1.0);";
   print_program "x ~ uniform(0.0, 1.0);";
   [%expect
     {|

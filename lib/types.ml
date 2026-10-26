@@ -25,6 +25,8 @@ type dist =
   | PExponential of expr
   | PBernoulli of expr
   | PNormal of expr * expr
+  | PGamma of expr * expr
+  | PBeta of expr * expr
 [@@deriving show { with_path = false }]
 
 type stmt = LetDet of string * expr | LetRand of string * dist

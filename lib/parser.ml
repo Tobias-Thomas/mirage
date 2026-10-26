@@ -125,6 +125,16 @@ and parse_dist state =
             expect state COMMA;
             let sigma = parse_expr state in
             PNormal (mu, sigma)
+        | "Gamma" ->
+            let alpha = parse_expr state in
+            expect state COMMA;
+            let beta = parse_expr state in
+            PGamma (alpha, beta)
+        | "Beta" ->
+            let alpha = parse_expr state in
+            expect state COMMA;
+            let beta = parse_expr state in
+            PBeta (alpha, beta)
         | _ -> failwith "unknown distribution name"
       in
       expect state RPAREN;

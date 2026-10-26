@@ -237,6 +237,42 @@ let%expect_test "normal observation scored under a sampled mean" =
     runtime error: Type_error: Normal can only be instantiated with two Floats
     |}]
 
+(* Log-densities from the closed forms (see test_distributions.ml). *)
+let%expect_test "gamma and beta observations" =
+  print_eval "x ~ Gamma(2.0, 3.0); observe x 1.0;";
+  print_eval "p ~ Beta(2.0, 5.0); observe p 0.2;";
+  print_eval "p ~ Beta(2.0, 2.0); observe p 1.5;";
+  print_eval "x ~ Gamma(0.0, 1.0);";
+  print_eval "x ~ Gamma(1, 1);";
+  print_eval "p ~ Beta(1, 1);";
+  [%expect
+    {|
+    x = (Continuous 1.)
+    log_weight = -0.802775
+    p = (Continuous 0.2)
+    log_weight = 0.899185
+    p = (Continuous 1.5)
+    log_weight = -inf
+    runtime error: Invalid_distribution: Gamma (0, 1): expected positive and finite values
+    runtime error: Type_error: Gamma can only be instantiated with two Floats
+    runtime error: Type_error: Beta can only be instantiated with two Floats
+    |}]
+
+(* Parameters can themselves be random: a Beta whose first parameter is drawn
+   from a Gamma. *)
+let%expect_test "gamma and beta samples stay in their support" =
+  let seeds = List.init 1000 Fun.id in
+  let prog = "a ~ Gamma(2.0, 1.0); p ~ Beta(a, 2.0);" in
+  let positive = function Types.Continuous f -> f > 0. | _ -> false in
+  let in_unit = function
+    | Types.Continuous f -> 0. < f && f < 1.
+    | _ -> false
+  in
+  Printf.printf "%b %b\n"
+    (List.for_all positive (sample_var ~seeds "a" prog))
+    (List.for_all in_unit (sample_var ~seeds "p" prog));
+  [%expect {| true true |}]
+
 let%expect_test "observed boolean" =
   print_eval "c ~ Bernoulli(0.25); observe c true;";
   print_eval "c ~ Bernoulli(0.25); observe c false;";

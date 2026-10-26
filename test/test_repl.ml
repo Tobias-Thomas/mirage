@@ -292,6 +292,39 @@ let%expect_test "mean matches the analytic posterior" =
     true
     |}]
 
+(* Two more conjugate pairs. Beta(2, 2) prior with a Bernoulli observation
+   true: posterior Beta(3, 2), mean 3/5. Gamma(2, 1) prior on the rate of an
+   Exponential, observing 0.5: posterior Gamma(3, 1.5), mean 2 (posterior sd
+   about 1.15, standard error well below 0.05 with 10000 samples). *)
+let%expect_test "mean matches conjugate posteriors with gamma and beta priors" =
+  let close ~tol expected actual =
+    Printf.printf "%b\n" (Float.abs (actual -. expected) < tol)
+  in
+  let beta_coin = "p ~ Beta(2.0, 2.0);\nc ~ Bernoulli(p);\nobserve c true;\n" in
+  let gamma_rate =
+    "rate ~ Gamma(2.0, 1.0);\ny ~ Exponential(rate);\nobserve y 0.5;\n"
+  in
+  close ~tol:0.02 0.6
+    (mean_after
+       [
+         "load " ^ model_file "beta_coin.mrg" beta_coin;
+         "seed 1";
+         "sample 10000";
+       ]
+       "p");
+  close ~tol:0.1 2.
+    (mean_after
+       [
+         "load " ^ model_file "gamma_rate.mrg" gamma_rate;
+         "seed 1";
+         "sample 10000";
+       ]
+       "rate");
+  [%expect {|
+    true
+    true
+    |}]
+
 (* A Binary variable counts true as 1, so its mean is the probability of true;
    an observed variable has the same value in every sample. *)
 let%expect_test "mean of an observed boolean" =
@@ -384,7 +417,8 @@ let%expect_test "time runs the command and keeps its new state" =
 
 let%expect_test "parse quit" =
   List.iter print_parse [ "quit"; "  quit  "; "quit now"; "time quit" ];
-  [%expect {|
+  [%expect
+    {|
     Quit
     Quit
     error: Quit can only stand alone
@@ -396,7 +430,8 @@ let%expect_test "quit ends the session, also when timed" =
   run_session [ "time quit"; "seed 2" ];
   (* A malformed quit is an ordinary error and the session goes on. *)
   run_session [ "quit now"; "seed 2" ];
-  [%expect {|
+  [%expect
+    {|
     > seed 1
     Updated random seed
     > quit

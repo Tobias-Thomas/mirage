@@ -115,6 +115,22 @@ let eval_dist env dist =
           raise
             (Runtime_error
                (Type_error "Normal can only be instantiated with two Floats")))
+  | PGamma (alpha, beta) -> (
+      match (eval_expr env alpha, eval_expr env beta) with
+      | Continuous f1, Continuous f2 ->
+          of_result_dist (Distributions.gamma ~alpha:f1 ~beta:f2)
+      | _ ->
+          raise
+            (Runtime_error
+               (Type_error "Gamma can only be instantiated with two Floats")))
+  | PBeta (alpha, beta) -> (
+      match (eval_expr env alpha, eval_expr env beta) with
+      | Continuous f1, Continuous f2 ->
+          of_result_dist (Distributions.beta ~alpha:f1 ~beta:f2)
+      | _ ->
+          raise
+            (Runtime_error
+               (Type_error "Beta can only be instantiated with two Floats")))
 
 let eval_stmt rng obs_map trace stmt =
   match stmt with
