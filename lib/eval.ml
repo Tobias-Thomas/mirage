@@ -18,7 +18,7 @@ exception Runtime_error of error
 
 module Env = Map.Make (String)
 
-type trace = { env : value Env.t; log_weight : float }
+type trace = { env : value Env.t; log_likelihood : float; log_prior : float }
 
 let to_value : type a. a kind -> a -> value =
  fun kind v -> match kind with Float -> Continuous v | Bool -> Binary v
@@ -154,17 +154,19 @@ let eval_stmt rng obs_map trace stmt =
             match Env.find_opt var obs_map with
             | Some v ->
                 {
+                  trace with
                   env = Env.add var v trace.env;
-                  log_weight =
-                    trace.log_weight +. Distributions.logpdf dist (of_value v k);
+                  log_likelihood =
+                    trace.log_likelihood
+                    +. Distributions.logpdf dist (of_value v k);
                 }
             | None ->
+                let sampled_val = Distributions.sample rng dist in
                 {
                   trace with
-                  env =
-                    Env.add var
-                      (to_value k (Distributions.sample rng dist))
-                      trace.env;
+                  env = Env.add var (to_value k sampled_val) trace.env;
+                  log_prior =
+                    trace.log_prior +. Distributions.logpdf dist sampled_val;
                 }))
 
 let eval_obs obs_map obs =
@@ -181,7 +183,7 @@ let eval_program rng prog =
     let obs_map = List.fold_left eval_obs Env.empty prog.observations in
     let trace =
       List.fold_left (eval_stmt rng obs_map)
-        { env = Env.empty; log_weight = 0.0 }
+        { env = Env.empty; log_likelihood = 0.0; log_prior = 0.0 }
         prog.stmts
     in
     Ok trace

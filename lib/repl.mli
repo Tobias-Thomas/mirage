@@ -1,9 +1,11 @@
+type inference_algorithm
 type state
 
 val init : unit -> state
 
 type command =
   | Load of string
+  | Algorithm of inference_algorithm
   | Sample of int
   | Seed of int
   | Observe of string * Types.value

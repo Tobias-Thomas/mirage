@@ -1,10 +1,13 @@
 open Types
 open Eval
 
+type inference_algorithm = Likelihood_weighting | Metropolis_hastings
+
 type state = {
   program : program option;
   observation_map : value Env.t;
   rng : Random.State.t;
+  inference_algorithm : inference_algorithm;
   last_samples : (trace list * float list) option;
 }
 
@@ -13,11 +16,13 @@ let init () =
     program = None;
     observation_map = Env.empty;
     rng = Random.State.make_self_init ();
+    inference_algorithm = Metropolis_hastings;
     last_samples = None;
   }
 
 type command =
   | Load of string
+  | Algorithm of inference_algorithm
   | Sample of int
   | Seed of int
   | Observe of string * value
@@ -30,6 +35,14 @@ let rec parse_command s =
   match List.filter (fun w -> w <> "") (String.split_on_char ' ' s) with
   | [ "load"; path ] -> Ok (Load path)
   | "load" :: _ -> Error "Load requires exactly one argument"
+  | [ "algorithm"; inf_algo ] -> (
+      match inf_algo with
+      | "likelihood_weighting" | "lw" -> Ok (Algorithm Likelihood_weighting)
+      | "metropolis_hastings" | "mh" -> Ok (Algorithm Metropolis_hastings)
+      | _ ->
+          Error (Printf.sprintf "%s is not a supported algorithm name" inf_algo)
+      )
+  | "algorithm" :: _ -> Error "Algorithm requires exactly one argument"
   | [ "unobserve"; variable ] -> Ok (Unobserve variable)
   | "unobserve" :: _ -> Error "Unobserve requires exactly one argument"
   | "sample" :: args -> (
@@ -105,11 +118,18 @@ let rec execute state command =
         ( { state with rng = Random.State.make [| s |] },
           "Updated random seed",
           true )
+  | Algorithm inference_algorithm ->
+      Ok ({ state with inference_algorithm }, "Updated algorithm", true)
   | Sample n -> (
       match state.program with
       | Some program -> (
+          let inf_algo =
+            match state.inference_algorithm with
+            | Likelihood_weighting -> Inference.likelihood_weighting
+            | Metropolis_hastings -> Inference.metropolis_hastings
+          in
           match
-            Inference.sample state.rng
+            inf_algo state.rng
               { program with observations = Env.bindings state.observation_map }
               n
           with

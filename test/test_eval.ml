@@ -5,7 +5,7 @@ open Helpers
 
 let%expect_test "empty program" =
   print_eval "";
-  [%expect {| log_weight = 0 |}]
+  [%expect {| log_likelihood = 0 |}]
 
 let%expect_test "integer arithmetic" =
   print_eval "a = 1 + 2 * 3; b = 7 / 2; c = -7 / 2; d = 10 - 4 - 3;";
@@ -15,7 +15,7 @@ let%expect_test "integer arithmetic" =
     b = (Discrete 3)
     c = (Discrete -3)
     d = (Discrete 3)
-    log_weight = 0
+    log_likelihood = 0
     |}]
 
 let%expect_test "float arithmetic" =
@@ -25,7 +25,7 @@ let%expect_test "float arithmetic" =
     a = (Continuous 3.)
     b = (Continuous 0.25)
     c = (Continuous -2.5)
-    log_weight = 0
+    log_likelihood = 0
     |}]
 
 let%expect_test "comparisons" =
@@ -38,7 +38,7 @@ let%expect_test "comparisons" =
     c = (Binary true)
     d = (Binary false)
     e = (Binary false)
-    log_weight = 0
+    log_likelihood = 0
     |}]
 
 let%expect_test "variables refer to earlier assignments" =
@@ -48,7 +48,7 @@ let%expect_test "variables refer to earlier assignments" =
     x = (Discrete 2)
     y = (Discrete 4)
     z = (Discrete 6)
-    log_weight = 0
+    log_likelihood = 0
     |}]
 
 let%expect_test "float division by zero" =
@@ -57,7 +57,7 @@ let%expect_test "float division by zero" =
     {|
     a = (Continuous infinity)
     b = (Continuous nan)
-    log_weight = 0
+    log_likelihood = 0
     |}]
 
 (* Runtime errors *)
@@ -152,10 +152,10 @@ let%expect_test "observation without a matching ~" =
     "z = 1.0 + 1.0; x ~ Uniform(0.0, 1.0); observe x 0.5; observe y 1.0;";
   [%expect
     {|
-    log_weight = 0
+    log_likelihood = 0
     x = (Continuous 0.5)
     z = (Continuous 2.)
-    log_weight = 0
+    log_likelihood = 0
     |}]
 
 (* Known gap (see TODO.md): integer division by zero escapes [eval_program] as
@@ -174,11 +174,11 @@ let%expect_test "sampling is reproducible with a fixed seed" =
     c = (Binary true)
     x = (Continuous 0.444764790527)
     y = (Continuous 0.746613822215)
-    log_weight = 0
+    log_likelihood = 0
     c = (Binary true)
     x = (Continuous 0.444764790527)
     y = (Continuous 0.746613822215)
-    log_weight = 0
+    log_likelihood = 0
     |}]
 
 let%expect_test "distribution arguments can be expressions" =
@@ -187,7 +187,7 @@ let%expect_test "distribution arguments can be expressions" =
     {|
     low = (Continuous 1.)
     x = (Continuous 1.44476479053)
-    log_weight = 0
+    log_likelihood = 0
     |}]
 
 let seeds = List.init 1000 Fun.id
@@ -221,7 +221,7 @@ let%expect_test "observed variable is bound and scored" =
   print_eval "x ~ Uniform(0.0, 2.0); observe x 0.5;";
   [%expect {|
     x = (Continuous 0.5)
-    log_weight = -0.693147
+    log_likelihood = -0.693147
     |}]
 
 let%expect_test "normal observation scored under a sampled mean" =
@@ -232,7 +232,7 @@ let%expect_test "normal observation scored under a sampled mean" =
     {|
     mu = (Continuous 1.)
     x = (Continuous 3.)
-    log_weight = -2.11209
+    log_likelihood = -2.11209
     runtime error: Invalid_distribution: Normal(0, 0): expected finite values and sigma > 0.
     runtime error: Type_error: Normal can only be instantiated with two Floats
     |}]
@@ -248,11 +248,11 @@ let%expect_test "gamma and beta observations" =
   [%expect
     {|
     x = (Continuous 1.)
-    log_weight = -0.802775
+    log_likelihood = -0.802775
     p = (Continuous 0.2)
-    log_weight = 0.899185
+    log_likelihood = 0.899185
     p = (Continuous 1.5)
-    log_weight = -inf
+    log_likelihood = -inf
     runtime error: Invalid_distribution: Gamma (0, 1): expected positive and finite values
     runtime error: Type_error: Gamma can only be instantiated with two Floats
     runtime error: Type_error: Beta can only be instantiated with two Floats
@@ -279,9 +279,9 @@ let%expect_test "observed boolean" =
   [%expect
     {|
     c = (Binary true)
-    log_weight = -1.38629
+    log_likelihood = -1.38629
     c = (Binary false)
-    log_weight = -0.287682
+    log_likelihood = -0.287682
     |}]
 
 let%expect_test "log weights of several observations add up" =
@@ -291,14 +291,14 @@ let%expect_test "log weights of several observations add up" =
     {|
     a = (Binary true)
     b = (Binary false)
-    log_weight = -1.38629
+    log_likelihood = -1.38629
     |}]
 
 let%expect_test "observation outside the support gives weight zero" =
   print_eval "x ~ Uniform(0.0, 1.0); observe x 2.0;";
   [%expect {|
     x = (Continuous 2.)
-    log_weight = -inf
+    log_likelihood = -inf
     |}]
 
 let%expect_test "observed value is used by later statements" =
@@ -307,14 +307,14 @@ let%expect_test "observed value is used by later statements" =
     {|
     x = (Continuous 1.5)
     y = (Continuous 3.)
-    log_weight = -1.5
+    log_likelihood = -1.5
     |}]
 
 let%expect_test "observe may come before the variable" =
   print_eval "observe x 0.5; x ~ Uniform(0.0, 1.0);";
   [%expect {|
     x = (Continuous 0.5)
-    log_weight = 0
+    log_likelihood = 0
     |}]
 
 let%expect_test "observation scored under a sampled parameter" =
@@ -323,5 +323,5 @@ let%expect_test "observation scored under a sampled parameter" =
     {|
     c = (Binary true)
     p = (Continuous 0.444764790527)
-    log_weight = -0.81021
+    log_likelihood = -0.81021
     |}]

@@ -10,6 +10,10 @@ exception Runtime_error of error
 
 module Env : Map.S with type key = string
 
-type trace = { env : Types.value Env.t; log_weight : float }
+type trace = {
+  env : Types.value Env.t;
+  log_likelihood : float;
+  log_prior : float;
+}
 
 val eval_program : Random.State.t -> Types.program -> (trace, error) result

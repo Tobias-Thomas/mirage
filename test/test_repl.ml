@@ -3,6 +3,8 @@ open Mirage
 let rec show_command (c : Repl.command) =
   match c with
   | Load path -> "Load " ^ path
+  (* [Repl.inference_algorithm] is abstract, so the argument can't be shown. *)
+  | Algorithm _ -> "Algorithm"
   | Sample n -> Printf.sprintf "Sample %d" n
   | Seed n -> Printf.sprintf "Seed %d" n
   | Observe (x, v) -> Printf.sprintf "Observe %s %s" x (Types.show_value v)
@@ -276,20 +278,35 @@ let mean_after lines var =
    Beta(2, 1) after observing true (mean 2/3) and Beta(1, 2) after observing
    false (mean 1/3). With 10000 samples the standard error is about 0.003, so
    0.02 leaves plenty of room. *)
+let algorithms = [ "lw"; "mh" ]
+
 let%expect_test "mean matches the analytic posterior" =
-  let close expected actual =
-    Printf.printf "%b\n" (Float.abs (actual -. expected) < 0.02)
-  in
-  let load = [ "load " ^ model_file "coin.mrg" coin; "seed 1" ] in
-  close (2. /. 3.) (mean_after (load @ [ "sample 10000" ]) "p");
-  close (1. /. 3.)
-    (mean_after (load @ [ "observe c false"; "sample 10000" ]) "p");
-  (* Without the observation the prior mean 1/2 comes back. *)
-  close 0.5 (mean_after (load @ [ "unobserve c"; "sample 10000" ]) "p");
-  [%expect {|
-    true
-    true
-    true
+  List.iter
+    (fun algorithm ->
+      let close expected actual =
+        Printf.printf "%s %b\n" algorithm (Float.abs (actual -. expected) < 0.02)
+      in
+      let load =
+        [
+          "load " ^ model_file "coin.mrg" coin;
+          "algorithm " ^ algorithm;
+          "seed 1";
+        ]
+      in
+      close (2. /. 3.) (mean_after (load @ [ "sample 10000" ]) "p");
+      close (1. /. 3.)
+        (mean_after (load @ [ "observe c false"; "sample 10000" ]) "p");
+      (* Without the observation the prior mean 1/2 comes back. *)
+      close 0.5 (mean_after (load @ [ "unobserve c"; "sample 10000" ]) "p"))
+    algorithms;
+  [%expect
+    {|
+    lw true
+    lw true
+    lw true
+    mh true
+    mh true
+    mh true
     |}]
 
 (* Two more conjugate pairs. Beta(2, 2) prior with a Bernoulli observation
@@ -304,23 +321,22 @@ let%expect_test "mean matches conjugate posteriors with gamma and beta priors" =
   let gamma_rate =
     "rate ~ Gamma(2.0, 1.0);\ny ~ Exponential(rate);\nobserve y 0.5;\n"
   in
-  close ~tol:0.02 0.6
-    (mean_after
-       [
-         "load " ^ model_file "beta_coin.mrg" beta_coin;
-         "seed 1";
-         "sample 10000";
-       ]
-       "p");
-  close ~tol:0.1 2.
-    (mean_after
-       [
-         "load " ^ model_file "gamma_rate.mrg" gamma_rate;
-         "seed 1";
-         "sample 10000";
-       ]
-       "rate");
+  List.iter
+    (fun algorithm ->
+      let run name model =
+        [
+          "load " ^ model_file name model;
+          "algorithm " ^ algorithm;
+          "seed 1";
+          "sample 10000";
+        ]
+      in
+      close ~tol:0.02 0.6 (mean_after (run "beta_coin.mrg" beta_coin) "p");
+      close ~tol:0.1 2. (mean_after (run "gamma_rate.mrg" gamma_rate) "rate"))
+    algorithms;
   [%expect {|
+    true
+    true
     true
     true
     |}]
@@ -443,3 +459,84 @@ let%expect_test "quit ends the session, also when timed" =
     > seed 2
     Updated random seed
     |}]
+
+(* algorithm *)
+
+let%expect_test "parse algorithm" =
+  List.iter print_parse
+    [
+      "algorithm lw";
+      "algorithm likelihood_weighting";
+      "algorithm mh";
+      "algorithm metropolis_hastings";
+      "time algorithm mh";
+      "algorithm";
+      "algorithm lw mh";
+      "algorithm gibbs";
+      "algorithm LW";
+      "Algorithm lw";
+    ];
+  [%expect
+    {|
+    Algorithm
+    Algorithm
+    Algorithm
+    Algorithm
+    Time Algorithm
+    error: Algorithm requires exactly one argument
+    error: Algorithm requires exactly one argument
+    error: gibbs is not a supported algorithm name
+    error: LW is not a supported algorithm name
+    error: Algorithm is not a known command
+    |}]
+
+(* Switching works without a program and keeps the loaded program and
+   observations. *)
+let%expect_test "algorithm can be switched at any time" =
+  run_session
+    [
+      "algorithm lw";
+      "load " ^ model_file "coin.mrg" coin;
+      "algorithm mh";
+      "sample 10";
+      "algorithm lw";
+      "sample 10";
+      "algorithm gibbs";
+      "sample 10";
+    ];
+  [%expect
+    {|
+    > algorithm lw
+    Updated algorithm
+    > load coin.mrg
+    Loaded program
+    > algorithm mh
+    Updated algorithm
+    > sample 10
+    Done sampling
+    > algorithm lw
+    Updated algorithm
+    > sample 10
+    Done sampling
+    > algorithm gibbs
+    error: gibbs is not a supported algorithm name
+    > sample 10
+    Done sampling
+    |}]
+
+(* With the same seed, the two algorithms consume random numbers differently
+   and weight the samples differently, so their estimates can't be identical.
+   If they are, [sample] ignores the chosen algorithm. *)
+let%expect_test "the chosen algorithm is used by sample" =
+  let mean algorithm =
+    mean_after
+      [
+        "load " ^ model_file "coin.mrg" coin;
+        "algorithm " ^ algorithm;
+        "seed 1";
+        "sample 1000";
+      ]
+      "p"
+  in
+  Printf.printf "%b\n" (mean "lw" <> mean "mh");
+  [%expect {| true |}]

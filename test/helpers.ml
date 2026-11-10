@@ -50,19 +50,19 @@ let show_error (e : Eval.error) =
   | Invalid_distribution msg -> "Invalid_distribution: " ^ msg
 
 (* Parses and evaluates [s] with a fixed seed, then prints every variable
-   (sorted by name) and the log weight, or the runtime error. *)
+   (sorted by name) and the log likelihood, or the runtime error. *)
 let print_eval ?(seed = 42) s =
   print_or_error (fun () ->
       let rng = Random.State.make [| seed |] in
       match Eval.eval_program rng (parse s) with
-      | Ok { env; log_weight } ->
+      | Ok { env; log_likelihood; _ } ->
           let bindings =
             List.map
               (fun (var, v) -> var ^ " = " ^ Types.show_value v)
               (Eval.Env.bindings env)
           in
           String.concat "\n"
-            (bindings @ [ Printf.sprintf "log_weight = %g" log_weight ])
+            (bindings @ [ Printf.sprintf "log_likelihood = %g" log_likelihood ])
       | Error e -> "runtime error: " ^ show_error e)
 
 (* Evaluates [s] once per seed and returns the value of [var] in each run. *)
